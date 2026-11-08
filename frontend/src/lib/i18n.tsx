@@ -21,6 +21,7 @@ const en = {
     deleted: "Scan deleted", cleared: "History cleared", saved: "Call report saved", copied: "Warning copied — paste it into WhatsApp or Telegram",
     deleteTitle: "Delete this scan?", deleteBody: "The report will be removed permanently.", clearTitle: "Clear all history?", clearBody: "Every saved scan will be deleted. This cannot be undone.",
     clearAction: "Clear history", toTop: "Back to top", loading: "Loading page…",
+    browserMode: "Browser version: analysis runs on your device and history stays in this browser. Live link checks and AI need the server version.", engineLoading: "Loading analysis engine…",
     live: "Live", refresh: "Refresh", updated: "Updated",
     palette: {
       open: "Quick actions", placeholder: "Type a page or an action…", none: "Nothing found", pages: "Pages", actions: "Actions", hint: "↑↓ to move · Enter to open · Esc to close",
@@ -184,6 +185,7 @@ const ru: Dict = {
     deleted: "Проверка удалена", cleared: "История очищена", saved: "Отчёт о звонке сохранён", copied: "Предупреждение скопировано — вставьте в WhatsApp или Telegram",
     deleteTitle: "Удалить эту проверку?", deleteBody: "Отчёт будет удалён навсегда.", clearTitle: "Очистить всю историю?", clearBody: "Все сохранённые проверки будут удалены. Это действие необратимо.",
     clearAction: "Очистить историю", toTop: "Наверх", loading: "Загрузка страницы…",
+    browserMode: "Браузерная версия: анализ выполняется на вашем устройстве, история хранится в этом браузере. Онлайн-проверка ссылок и ИИ доступны в серверной версии.", engineLoading: "Загрузка движка анализа…",
     live: "Онлайн", refresh: "Обновить", updated: "Обновлено",
     palette: {
       open: "Быстрые действия", placeholder: "Введите страницу или действие…", none: "Ничего не найдено", pages: "Страницы", actions: "Действия", hint: "↑↓ — выбрать · Enter — открыть · Esc — закрыть",
@@ -345,6 +347,7 @@ const kk: Dict = {
     deleted: "Тексеру жойылды", cleared: "Тарих тазаланды", saved: "Қоңырау есебі сақталды", copied: "Ескерту көшірілді — WhatsApp не Telegram-ға қойыңыз",
     deleteTitle: "Бұл тексеруді жою керек пе?", deleteBody: "Есеп біржола жойылады.", clearTitle: "Бүкіл тарихты тазалау керек пе?", clearBody: "Барлық сақталған тексерулер жойылады. Бұл әрекетті қайтару мүмкін емес.",
     clearAction: "Тарихты тазалау", toTop: "Жоғарыға", loading: "Бет жүктелуде…",
+    browserMode: "Браузер нұсқасы: талдау сіздің құрылғыңызда жүреді, тарих осы браузерде сақталады. Сілтемелерді онлайн тексеру мен ЖИ сервер нұсқасында қолжетімді.", engineLoading: "Талдау қозғалтқышы жүктелуде…",
     live: "Онлайн", refresh: "Жаңарту", updated: "Жаңартылды",
     palette: {
       open: "Жылдам әрекеттер", placeholder: "Бетті немесе әрекетті теріңіз…", none: "Ештеңе табылмады", pages: "Беттер", actions: "Әрекеттер", hint: "↑↓ — таңдау · Enter — ашу · Esc — жабу",

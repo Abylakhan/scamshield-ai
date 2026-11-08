@@ -45,7 +45,7 @@ export function RiskGauge({ score, level, size = 200 }: { score: number; level: 
           animate={level === "critical" ? { opacity: [1, 0.75, 1] } : { opacity: 1 }} transition={{ duration: 1.6, repeat: level === "critical" ? Infinity : 0 }} />
         {score > 0 && (
           <>
-            <motion.circle cx={tipX} cy={tipY} r="9" fill={color} opacity="0.25" animate={{ r: [8, 12, 8] }} transition={{ duration: 1.8, repeat: Infinity }} />
+            <motion.circle cx={tipX} cy={tipY} r={10} fill={color} initial={{ opacity: 0.15 }} animate={{ opacity: [0.15, 0.45, 0.15] }} transition={{ duration: 1.8, repeat: Infinity }} />
             <motion.circle cx={tipX} cy={tipY} r="4.5" fill="#fff" style={{ filter: `drop-shadow(0 0 6px ${color})` }} />
           </>
         )}

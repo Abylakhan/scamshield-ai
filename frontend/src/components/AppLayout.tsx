@@ -8,7 +8,7 @@ import { openPalette } from "./CommandPalette";
 import { ScrollTop } from "./ScrollTop";
 import { LangSwitch } from "./ui";
 import { useI18n } from "../lib/i18n";
-import { api } from "../lib/api";
+import { STATIC_MODE, api } from "../lib/api";
 import { cx } from "../lib/format";
 import type { Health } from "../lib/types";
 
@@ -23,6 +23,11 @@ export function useNavItems() {
     { to: "/learn", label: t.nav.learn, icon: BookOpen },
     { to: "/demo", label: t.nav.demo, icon: Presentation },
   ];
+}
+
+function EngineLoadingText() {
+  const { t } = useI18n();
+  return <span className="animate-pulse">{t.ui.engineLoading}</span>;
 }
 
 function EngineStatus() {
@@ -40,7 +45,7 @@ function EngineStatus() {
     <div className="rounded-xl border border-line bg-ink-900/60 p-3 text-[11px] text-slate-400">
       <p className="mb-1 flex items-center gap-2 font-semibold text-slate-300">
         <span className="relative flex h-1.5 w-1.5"><span className="absolute inset-0 rounded-full animate-pulse-ring" style={{ background: color }} /><span className="relative h-1.5 w-1.5 rounded-full" style={{ background: color, boxShadow: `0 0 8px ${color}` }} /></span>
-        {down ? "API offline" : h ? "Engine online" : "…"}
+        {down ? "API offline" : h ? (h.mode === "browser" ? "Browser engine" : "Engine online") : STATIC_MODE ? <EngineLoadingText /> : "…"}
       </p>
       {h && !down && <p className="font-mono">AI: {h.ai_provider.enabled ? "on" : "heuristic"} · RDAP: {h.checks.domain_age_rdap ? "on" : "off"}</p>}
       <svg viewBox="0 0 120 20" className="mt-2 h-4 w-full" aria-hidden>
@@ -131,6 +136,10 @@ export function AppLayout() {
       </AnimatePresence>
 
       <main className="mx-auto max-w-[1240px] px-4 pb-24 pt-6 sm:px-6 lg:px-10 lg:pt-10">
+        {STATIC_MODE && (
+          <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+            className="mb-5 rounded-xl border border-volt-400/25 bg-volt-400/5 px-4 py-2.5 text-xs leading-relaxed text-blue-200/90 print:hidden">{t.ui.browserMode}</motion.p>
+        )}
         <AnimatePresence mode="wait" initial={false}>
           <PageTransition key={loc.pathname}>{outlet}</PageTransition>
         </AnimatePresence>

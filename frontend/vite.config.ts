@@ -1,8 +1,13 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+declare const process: { env: Record<string, string | undefined> }; // avoids pulling in @types/node
+
 export default defineConfig({
+  // GitHub Pages serves the project under /<repo>/; set VITE_BASE for that build.
+  base: process.env.VITE_BASE ?? "/",
   plugins: [react()],
+  worker: { format: "es" },
   build: {
     rollupOptions: {
       output: {
