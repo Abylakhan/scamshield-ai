@@ -2,25 +2,13 @@ import type { AnalysisResult, CallScript, DashboardStats, Health, InputType, Lan
 
 const BASE = import.meta.env.VITE_API_BASE ?? "";
 
-export class ApiError extends Error {
-  constructor(public status: number, message: string, public fieldMessage?: string) {
-    super(message);
-  }
-}
+import { ApiError } from "./apiError";
+import { browserApi } from "./browserApi";
 
-/** Status 0 = network failure, 408 = client-side timeout. */
-export type ErrorKind = "network" | "timeout" | "invalid" | "rateLimit" | "notFound" | "unavailable" | "server";
+export { ApiError, errorKind, type ErrorKind } from "./apiError";
 
-export function errorKind(err: unknown): ErrorKind {
-  if (!(err instanceof ApiError)) return "server";
-  if (err.status === 0) return "network";
-  if (err.status === 408) return "timeout";
-  if (err.status === 422 || err.status === 400) return "invalid";
-  if (err.status === 429) return "rateLimit";
-  if (err.status === 404) return "notFound";
-  if (err.status === 503) return "unavailable";
-  return "server";
-}
+/** Static (GitHub Pages) builds run the analysis engine in the browser instead of calling a server. */
+export const STATIC_MODE = import.meta.env.VITE_STATIC_DEMO === "1";
 
 const ANALYZE_TIMEOUT_MS = 60_000; // URL checks + optional AI can take a while
 const DEFAULT_TIMEOUT_MS = 15_000;
@@ -44,7 +32,7 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = DEFAULT_
 
 const post = <T,>(path: string, body: unknown) => request<T>(path, { method: "POST", body: JSON.stringify(body) }, ANALYZE_TIMEOUT_MS);
 
-export const api = {
+const serverApi = {
   health: () => request<Health>("/api/health"),
   analyze: (type: InputType, content: string, lang: Lang, isDemo = false) => {
     if (type === "url") return post<AnalysisResult>("/api/analyze/url", { url: content, lang, is_demo: isDemo });
@@ -65,3 +53,5 @@ export const api = {
   threats: (lang: Lang) => request<ThreatIntel>(`/api/threats?lang=${lang}`),
   scenarios: (lang: Lang) => request<Scenario[]>(`/api/demo/scenarios?lang=${lang}`),
 };
+
+export const api: typeof serverApi = STATIC_MODE ? browserApi : serverApi;

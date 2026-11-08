@@ -111,6 +111,7 @@ export interface Scenario {
 
 export interface Health {
   status: string;
+  mode?: "server" | "browser";
   ai_provider: { enabled: boolean; model: string | null };
   checks: { url_fetch: boolean; domain_age_rdap: boolean; google_safe_browsing: boolean; virustotal: boolean };
 }

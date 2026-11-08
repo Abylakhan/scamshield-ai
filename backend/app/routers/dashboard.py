@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..engine.advice import THREAT_LABELS
+from ..engine.catalog import CATEGORY_INFO, INTEL_DISCLAIMER
 from ..engine.text_rules import rule_catalog
 from ..models import Scan
 from ..schemas import Lang
@@ -71,38 +72,6 @@ def dashboard_stats(db: Session = Depends(get_db), lang: Lang = Query("en"), day
     }
 
 
-CATEGORY_INFO = {
-    "phishing": {"en": "Fake login pages and messages that steal passwords, card data and SMS codes.",
-                 "ru": "Поддельные страницы входа и сообщения, крадущие пароли, данные карт и SMS-коды.",
-                 "kk": "Құпиясөздерді, карта деректерін және SMS-кодтарды ұрлайтын жалған кіру беттері мен хабарламалар."},
-    "bank_impersonation": {"en": "Calls and messages pretending to be Kaspi, Halyk or a 'bank security service'.",
-                           "ru": "Звонки и сообщения от имени Kaspi, Halyk или «службы безопасности банка».",
-                           "kk": "Kaspi, Halyk немесе «банк қауіпсіздік қызметі» атынан қоңыраулар мен хабарламалар."},
-    "government_impersonation": {"en": "Fake eGov notices, fines, police or court threats demanding payment.",
-                                 "ru": "Фейковые уведомления eGov, штрафы, угрозы полицией или судом с требованием оплаты.",
-                                 "kk": "Төлем талап ететін жалған eGov хабарламалары, айыппұлдар, полиция немесе сот қоқан-лоқылары."},
-    "investment_fraud": {"en": "Fake trading platforms, crypto bots and 'guaranteed income' offers.",
-                         "ru": "Фальшивые торговые платформы, крипто-боты и предложения «гарантированного дохода».",
-                         "kk": "Жалған сауда платформалары, крипто-боттар және «кепілді табыс» ұсыныстары."},
-    "financial_pyramid": {"en": "Schemes paying old members with new members' money; illegal in Kazakhstan.",
-                          "ru": "Схемы, платящие старым участникам деньгами новых; запрещены в Казахстане.",
-                          "kk": "Ескі қатысушыларға жаңалардың ақшасымен төлейтін схемалар; Қазақстанда тыйым салынған."},
-    "delivery_scam": {"en": "Fake parcel and customs notifications asking for a small 'fee' via a link.",
-                      "ru": "Фейковые уведомления о посылке или таможне с просьбой оплатить «небольшую комиссию».",
-                      "kk": "Сілтеме арқылы «шағын комиссия» сұрайтын жалған сәлемдеме және кеден хабарламалары."},
-    "prize_scam": {"en": "'You won' messages and fake giveaways that end with a fee or data request.",
-                   "ru": "Сообщения «вы выиграли» и фейковые розыгрыши, заканчивающиеся требованием оплаты или данных.",
-                   "kk": "Төлем не деректер сұраумен аяқталатын «сіз ұтып алдыңыз» хабарламалары мен жалған ұтыс ойындары."},
-    "social_engineering": {"en": "Psychological manipulation: urgency, fear, secrecy, family emergencies.",
-                           "ru": "Психологическая манипуляция: срочность, страх, секретность, «беда с родственником».",
-                           "kk": "Психологиялық манипуляция: асықтыру, қорқыныш, құпиялық, «туысым қиындықта»."},
-    "job_scam": {"en": "Easy remote 'jobs' that require deposits or lead into task-fraud schemes.",
-                 "ru": "«Лёгкая удалённая работа», требующая взносов или ведущая в схемы с заданиями.",
-                 "kk": "Жарна талап ететін немесе тапсырма алаяқтығына апаратын «оңай қашықтағы жұмыс»."},
-    "malicious_url": {"en": "Look-alike, newly registered or obfuscated websites.",
-                      "ru": "Сайты-двойники, недавно зарегистрированные или замаскированные сайты.",
-                      "kk": "Ұқсас, жақында тіркелген немесе жасырылған сайттар."},
-}
 
 
 @router.get("/threats", tags=["threat-intelligence"])
@@ -145,9 +114,5 @@ def threats(db: Session = Depends(get_db), lang: Lang = Query("en")):
         "domain_indicators": domain_list,
         "recent_findings": [{"id": s.id, "threat_type": s.threat_type, "label": THREAT_LABELS.get(s.threat_type, {}).get(lang, s.threat_type),
                              "risk_score": s.risk_score, "summary": s.summary, "created_at": s.created_at, "is_demo": s.is_demo} for s in recent],
-        "disclaimer": {
-            "en": "Reference patterns are detection rules. Domain indicators come only from content analyzed on this instance and are not confirmed real-world threats unless a threat-intelligence check flagged them.",
-            "ru": "Эталонные шаблоны — это правила обнаружения. Индикаторы доменов получены только из проверенного здесь контента и не являются подтверждёнными угрозами, если их не отметила проверка по базам угроз.",
-            "kk": "Эталондық үлгілер — анықтау ережелері. Домен индикаторлары тек осы жерде тексерілген мазмұннан алынған және қауіп базалары белгілемесе, расталған қауіп болып саналмайды.",
-        }[lang],
+        "disclaimer": INTEL_DISCLAIMER[lang],
     }

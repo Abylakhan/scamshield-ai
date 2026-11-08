@@ -11,3 +11,4 @@ backend/tests/test.db
 *.db-wal
 *.db-shm
 *.db-journal
+frontend/public/engine/
