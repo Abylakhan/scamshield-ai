@@ -1,0 +1,17 @@
+# One-click deploy on Render (free plan): https://render.com/deploy?repo=https://github.com/Abylakhan/scamshield-ai
+services:
+  - type: web
+    name: scamshield-ai
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "60"
+      # Optional integrations — fill in on Render if you have keys; the app works without them.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_SAFE_BROWSING_API_KEY
+        sync: false
+      - key: VIRUSTOTAL_API_KEY
+        sync: false
