@@ -9,6 +9,14 @@ the checks that ran (and the ones that couldn't run), and concrete protective st
 
 ## Live demo / deploy
 
+**Open in the browser: https://abylakhan.github.io/scamshield-ai/**
+
+This is the GitHub Pages build. The same Python engine runs inside the browser (Pyodide), and history is stored in your browser.
+Live link checks (page inspection, domain age, reputation) and AI need the server version below.
+The first visit downloads the engine in about 10 seconds. To update the site, run `npm run build:pages` in `frontend/` and push `dist/` to the `gh-pages` branch.
+
+Full server version:
+
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Abylakhan/scamshield-ai)
 
 One click deploys the whole app (backend and frontend in one Docker container, defined in `render.yaml` and
