@@ -9,7 +9,7 @@ const GOOGLE = "https://generativelanguage.googleapis.com/v1beta/models";
 const MAX_BODY = 64 * 1024; // bytes
 const MAX_OUTPUT_TOKENS = 4096;
 const LOCAL = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
-const ATTEMPT_MS = 18_000; // per model; the site waits up to 45 s in total
+const ATTEMPT_MS = 30_000; // per model (a full report answer takes 10–30 s); the site waits up to 70 s in total
 
 /** Primary model first, then FALLBACK_MODELS (comma-separated) — used when a model is overloaded or slow. */
 function models(env) {

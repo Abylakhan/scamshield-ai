@@ -51,7 +51,7 @@ export class GeminiError extends Error {
 }
 
 /** POST a generateContent body; returns the raw response JSON. */
-export async function callGemini(s: GeminiSettings, body: object, timeoutMs = 45_000): Promise<unknown> {
+export async function callGemini(s: GeminiSettings, body: object, timeoutMs = 70_000): Promise<unknown> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   let res: Response;
