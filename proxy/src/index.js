@@ -9,6 +9,29 @@ const GOOGLE = "https://generativelanguage.googleapis.com/v1beta/models";
 const MAX_BODY = 64 * 1024; // bytes
 const MAX_OUTPUT_TOKENS = 4096;
 const LOCAL = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+const ATTEMPT_MS = 18_000; // per model; the site waits up to 45 s in total
+
+/** Primary model first, then FALLBACK_MODELS (comma-separated) — used when a model is overloaded or slow. */
+function models(env) {
+  const list = [env.GEMINI_MODEL || "gemini-3.8-flash", ...(env.FALLBACK_MODELS || "").split(",")];
+  return [...new Set(list.map((m) => m.trim()).filter(Boolean))];
+}
+
+async function callModel(model, env, payload) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ATTEMPT_MS);
+  try {
+    return await fetch(`${GOOGLE}/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST", signal: ctrl.signal,
+      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+      body: payload,
+    });
+  } catch {
+    return null; // timeout / network — try the next model
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function allowed(origin, env) {
   if (!origin) return false;
@@ -37,9 +60,17 @@ export default {
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: h });
 
     const url = new URL(req.url);
-    const model = env.GEMINI_MODEL || "gemini-3.8-flash";
+    const model = models(env)[0];
     if (req.method === "GET" && url.pathname === "/health") {
-      return json({ ok: Boolean(env.GEMINI_API_KEY), model }, 200, h);
+      return json({ ok: Boolean(env.GEMINI_API_KEY), model, fallbacks: models(env).slice(1) }, 200, h);
+    }
+    if (req.method === "GET" && url.pathname === "/models" && env.GEMINI_API_KEY) {
+      // Names only (no key, no quotas): which Gemini models this key can use — for choosing fallbacks.
+      const r = await fetch(`${GOOGLE}?pageSize=200`, { headers: { "x-goog-api-key": env.GEMINI_API_KEY } });
+      const d = await r.json().catch(() => ({}));
+      const names = (d.models || []).filter((m) => (m.supportedGenerationMethods || []).includes("generateContent"))
+        .map((m) => String(m.name).replace(/^models\//, ""));
+      return json({ models: names }, r.ok ? 200 : r.status, h);
     }
     if (req.method !== "POST" || url.pathname !== "/generate") return json({ error: { message: "not found" } }, 404, h);
     if (!env.GEMINI_API_KEY) return json({ error: { message: "proxy has no API key configured" } }, 503, h);
@@ -61,13 +92,18 @@ export default {
     const forward = { contents: body.contents, generationConfig: gen };
     if (body.systemInstruction) forward.systemInstruction = body.systemInstruction;
 
-    const upstream = await fetch(`${GOOGLE}/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
-      body: JSON.stringify(forward),
-    });
-    // Pass Google's answer through unchanged (error messages never contain the key).
-    const text = await upstream.text();
-    return new Response(text, { status: upstream.status, headers: { "Content-Type": "application/json", ...h } });
+    const payload = JSON.stringify(forward);
+    let last = null;
+    for (const m of models(env)) {
+      const upstream = await callModel(m, env, payload);
+      if (upstream && upstream.status !== 503 && upstream.status !== 429 && upstream.status < 500) {
+        // Pass Google's answer through unchanged (error messages never contain the key).
+        const text = await upstream.text();
+        return new Response(text, { status: upstream.status, headers: { "Content-Type": "application/json", "X-Model": m, ...h } });
+      }
+      last = upstream ? { status: upstream.status, text: await upstream.text() } : null;
+    }
+    if (last) return new Response(last.text, { status: last.status, headers: { "Content-Type": "application/json", ...h } });
+    return json({ error: { message: "Gemini did not answer in time — try again" } }, 504, h);
   },
 };

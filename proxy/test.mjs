@@ -45,7 +45,25 @@ assert.equal(r.status, 429);
 
 // health + missing key
 r = await worker.fetch(req("/health", { method: "GET" }), env);
-assert.deepEqual(await r.json(), { ok: true, model: "gemini-3.8-flash" });
+assert.deepEqual(await r.json(), { ok: true, model: "gemini-3.8-flash", fallbacks: [] });
 r = await worker.fetch(req("/generate", { body: JSON.stringify({ contents: [] }) }), { ...env, GEMINI_API_KEY: "" });
 assert.equal(r.status, 503);
+// overloaded primary model → next fallback answers
+const tried = [];
+globalThis.fetch = async (url) => {
+  tried.push(url);
+  return url.includes("gemini-3.8-flash") ? new Response('{"error":{"code":503}}', { status: 503 })
+    : new Response('{"candidates":[]}', { status: 200 });
+};
+r = await worker.fetch(req("/generate", { body: JSON.stringify({ contents: [] }) }), { ...env, FALLBACK_MODELS: "backup-a, backup-b" });
+assert.equal(r.status, 200); assert.equal(r.headers.get("X-Model"), "backup-a"); assert.equal(tried.length, 2);
+// all models down → last error passed through
+globalThis.fetch = async () => new Response('{"error":{"code":503}}', { status: 503 });
+r = await worker.fetch(req("/generate", { body: JSON.stringify({ contents: [] }) }), { ...env, FALLBACK_MODELS: "backup-a" });
+assert.equal(r.status, 503);
+// a bad key is not retried on other models
+tried.length = 0;
+globalThis.fetch = async (url) => { tried.push(url); return new Response('{"error":{"code":400}}', { status: 400 }); };
+r = await worker.fetch(req("/generate", { body: JSON.stringify({ contents: [] }) }), { ...env, FALLBACK_MODELS: "backup-a" });
+assert.equal(r.status, 400); assert.equal(tried.length, 1);
 console.log("proxy: all checks passed");

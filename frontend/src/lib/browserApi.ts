@@ -150,7 +150,7 @@ export const browserApi = {
     const g = loadGemini();
     if (g) {
       try {
-        const payload = await callGemini(g, await call<object>("speakers_request", { body }), 25_000);
+        const payload = await callGemini(g, await call<object>("speakers_request", { body }), 40_000);
         const speakers = await call<SpeakerResult["speakers"] | null>("speakers_apply", { body, payload });
         if (speakers) return { speakers, ai_used: true, model: g.model };
       } catch (e) {

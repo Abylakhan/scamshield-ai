@@ -7,7 +7,9 @@ compatibility_date = "2026-10-01"
 [vars]
 # Sites allowed to use the proxy (comma-separated). Local development origins are allowed too.
 ALLOWED_ORIGINS = "https://abylakhan.github.io"
-GEMINI_MODEL = "gemini-3.8-flash"
+GEMINI_MODEL = "gemini-3.5-flash"
+# Used in order when the main model is overloaded or slow.
+FALLBACK_MODELS = "gemini-flash-latest,gemini-3.8-flash"
 
 # Per-visitor limit: 20 AI requests per minute per IP.
 [[ratelimits]]
