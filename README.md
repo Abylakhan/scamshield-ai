@@ -38,6 +38,12 @@ Run the same container locally:
 docker build -t scamshield-ai . && docker run -p 8000:8000 scamshield-ai
 ```
 
+### Built-in AI on the public site
+
+The GitHub Pages build talks to Gemini through `proxy/` — a Cloudflare Worker that holds the API key as a secret — so
+AI works for every visitor with no setup, and the key never reaches the browser or the repository. Visitors may still
+add a personal key in AI settings. See [proxy/README.md](proxy/README.md) for the three deploy commands.
+
 ## Call Guard: live phone-scam detection
 
 The most common fraud in Kazakhstan starts with a phone call from the "bank security service": a loan was

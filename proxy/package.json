@@ -1,0 +1,9 @@
+{
+  "name": "scamshield-ai-proxy",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test.mjs",
+    "deploy": "npx wrangler deploy"
+  }
+}

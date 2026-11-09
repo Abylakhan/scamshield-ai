@@ -3,7 +3,7 @@ import { Bot, CheckCircle2, KeyRound, Loader2, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { STATIC_MODE } from "../lib/api";
 import { onAiFailure } from "../lib/browserApi";
-import { DEFAULT_GEMINI_MODEL, GeminiError, loadGemini, saveGemini, testGemini } from "../lib/gemini";
+import { AI_PROXY, DEFAULT_GEMINI_MODEL, GeminiError, loadGemini, loadPersonalGemini, saveGemini, testGemini } from "../lib/gemini";
 import { useI18n } from "../lib/i18n";
 import { useFeedback } from "./Feedback";
 
@@ -30,10 +30,11 @@ export function AiSettings() {
   const [model, setModel] = useState(DEFAULT_GEMINI_MODEL);
   const [testing, setTesting] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
-  const saved = !!loadGemini();
+  const saved = !!loadPersonalGemini();
+  const [testingProxy, setTestingProxy] = useState(false);
 
   useEffect(() => {
-    const onOpen = () => { const g = loadGemini(); setKey(g?.apiKey ?? ""); setModel(g?.model ?? DEFAULT_GEMINI_MODEL); setStatus(null); setOpen(true); };
+    const onOpen = () => { const g = loadPersonalGemini(); setKey(g?.apiKey ?? ""); setModel(g?.model ?? DEFAULT_GEMINI_MODEL); setStatus(null); setOpen(true); };
     window.addEventListener(OPEN_AI_SETTINGS, onOpen);
     return () => window.removeEventListener(OPEN_AI_SETTINGS, onOpen);
   }, []);
@@ -51,6 +52,12 @@ export function AiSettings() {
     try { await testGemini({ apiKey: key.trim(), model: model.trim() || DEFAULT_GEMINI_MODEL }); setStatus({ ok: true, text: A.testOk }); }
     catch (e) { setStatus({ ok: false, text: A.errors[e instanceof GeminiError ? e.kind : "other"] }); }
     finally { setTesting(false); }
+  };
+  const testProxy = async () => {
+    setTestingProxy(true); setStatus(null);
+    try { await testGemini({ apiKey: "", model: DEFAULT_GEMINI_MODEL, proxy: AI_PROXY }); setStatus({ ok: true, text: A.testOk }); }
+    catch (e) { setStatus({ ok: false, text: A.errors[e instanceof GeminiError ? e.kind : "other"] }); }
+    finally { setTestingProxy(false); }
   };
   const save = () => { saveGemini({ apiKey: key, model }); toast(A.saved); setOpen(false); };
   const remove = () => { saveGemini(null); setKey(""); toast(A.removed, "info"); setOpen(false); };
@@ -74,6 +81,15 @@ export function AiSettings() {
             </div>
             {STATIC_MODE ? (
               <form className="mt-5 space-y-3" onSubmit={(e) => { e.preventDefault(); if (key.trim()) save(); }}>
+                {AI_PROXY && (
+                  <div className={`rounded-xl border px-3 py-2.5 text-xs leading-relaxed ${saved ? "border-line bg-ink-950/60 text-slate-400" : "border-safe-400/30 bg-safe-400/10 text-safe-300"}`}>
+                    <p className="flex items-start gap-1.5 font-semibold"><CheckCircle2 size={14} className="mt-px shrink-0" />{saved ? A.builtInOverridden : A.builtIn}</p>
+                    <button type="button" className="mt-1.5 inline-flex items-center gap-1 font-semibold text-cyan-300 hover:underline" onClick={testProxy} disabled={testingProxy}>
+                      {testingProxy && <Loader2 size={12} className="animate-spin" />}{A.test}
+                    </button>
+                  </div>
+                )}
+                {AI_PROXY && <p className="label pt-1">{A.ownKey}</p>}
                 <div>
                   <label htmlFor="gemini-key" className="label mb-1.5 block">{A.keyLabel}</label>
                   <div className="relative">

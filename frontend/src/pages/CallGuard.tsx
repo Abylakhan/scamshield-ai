@@ -239,11 +239,14 @@ export default function CallGuard() {
     finally { if (ver === aiSeq.current) setRelabeling(false); }
   }, [lang, commit, rescore]);
 
+  // Read through a ref: a simulation started before the AI check finished must still use AI for later lines.
+  const aiReadyRef = useRef(false);
+  aiReadyRef.current = aiReady;
   const scheduleAi = useCallback(() => {
-    if (!aiReady) return;
+    if (!aiReadyRef.current) return;
     clearTimeout(aiTimer.current);
     aiTimer.current = window.setTimeout(runAi, AI_DELAY);
-  }, [aiReady, runAi]);
+  }, [runAi]);
 
   /** Add a recognised / typed phrase. */
   const addLine = useCallback(async (text: string, meta: Partial<PhraseMeta> & { speaker?: Speaker | "auto" } = {}) => {

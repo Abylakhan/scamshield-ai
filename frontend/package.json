@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "build:pages": "node scripts/bundle-engine.mjs && tsc -b && VITE_STATIC_DEMO=1 VITE_BASE=/scamshield-ai/ vite build && cp dist/index.html dist/404.html && touch dist/.nojekyll"
+    "build:pages": "node scripts/bundle-engine.mjs && tsc -b && VITE_STATIC_DEMO=1 VITE_BASE=/scamshield-ai/ vite build --mode pages && cp dist/index.html dist/404.html && touch dist/.nojekyll"
   },
   "dependencies": {
     "framer-motion": "^11.11.17",

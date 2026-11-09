@@ -1,0 +1,16 @@
+# ScamShield AI — Gemini proxy (Cloudflare Worker, free plan).
+# The Gemini API key lives only here, as a secret:  npx wrangler secret put GEMINI_API_KEY
+name = "scamshield-ai-proxy"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Sites allowed to use the proxy (comma-separated). Local development origins are allowed too.
+ALLOWED_ORIGINS = "https://abylakhan.github.io"
+GEMINI_MODEL = "gemini-3.8-flash"
+
+# Per-visitor limit: 20 AI requests per minute per IP.
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
