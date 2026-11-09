@@ -9,6 +9,8 @@ services:
       - key: RATE_LIMIT_PER_MINUTE
         value: "60"
       # Optional integrations — fill in on Render if you have keys; the app works without them.
+      - key: GEMINI_API_KEY
+        sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: GOOGLE_SAFE_BROWSING_API_KEY

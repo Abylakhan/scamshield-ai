@@ -22,7 +22,7 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     init_db()
-    log.info("ScamShield AI started (AI provider: %s)", "enabled" if settings.ai_enabled else "disabled — heuristic mode")
+    log.info("ScamShield AI started (AI provider: %s)", settings.active_ai_provider or "disabled — heuristic mode")
     yield
 
 
@@ -90,7 +90,7 @@ def health():
     return {
         "status": "ok",
         "version": app.version,
-        "ai_provider": {"enabled": settings.ai_enabled, "model": settings.ai_model if settings.ai_enabled else None},
+        "ai_provider": {"enabled": settings.ai_enabled, "provider": settings.active_ai_provider, "model": settings.active_ai_model},
         "checks": {
             "url_fetch": settings.enable_url_fetch,
             "domain_age_rdap": settings.enable_domain_age,

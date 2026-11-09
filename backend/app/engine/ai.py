@@ -1,4 +1,4 @@
-"""Optional AI interpretation layer (Anthropic Claude, structured JSON output).
+"""Optional AI interpretation layer (Google Gemini or Anthropic Claude, structured JSON output).
 
 The model receives the submitted content as untrusted data plus the deterministic findings and the
 *actual* results of external checks. Its output is schema-validated and used only as explanation and
@@ -74,11 +74,96 @@ def build_prompt(content: str, input_type: str, heuristic: list[Indicator], heur
     )
 
 
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+
+def gemini_request(content: str, input_type: str, lang: str, heuristic: list[Indicator], heuristic_score: int,
+                   checks: list[CheckResult]) -> dict:
+    """generateContent request body (also used by the browser build, which sends it with the visitor's own key)."""
+    schema = json.dumps(AIVerdict.model_json_schema(), ensure_ascii=False, separators=(",", ":"))
+    system = SYSTEM.format(language=LANG_NAME[lang]) + (
+        "\nRespond with a single JSON object only (no markdown), matching this JSON Schema:\n" + schema)
+    return {
+        "systemInstruction": {"parts": [{"text": system}]},
+        "contents": [{"role": "user", "parts": [{"text": build_prompt(content, input_type, heuristic, heuristic_score, checks)}]}],
+        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2, "maxOutputTokens": 4096},
+    }
+
+
+def _clip(v, n: int) -> str:
+    return str(v or "").strip()[:n]
+
+
+def parse_verdict(text: str) -> AIVerdict | None:
+    """Validate a model's JSON answer. Lengths and ranges are clipped first so a verbose but sane answer still
+    passes; anything structurally wrong is rejected (the heuristic result is used unchanged)."""
+    try:
+        raw = text.strip()
+        if raw.startswith("```"):
+            raw = raw.strip("`").removeprefix("json").strip()
+        d = json.loads(raw)
+        score = max(0, min(100, int(round(float(d.get("risk_score", 0))))))
+        level = d.get("risk_level")
+        if level not in ("low", "moderate", "high", "critical"):
+            level = "critical" if score >= 75 else "high" if score >= 50 else "moderate" if score >= 25 else "low"
+        inds = []
+        for i in (d.get("indicators") or [])[:6]:
+            sev = i.get("severity") if i.get("severity") in ("low", "medium", "high", "critical") else "medium"
+            inds.append({"name": _clip(i.get("name"), 80), "description": _clip(i.get("description"), 300),
+                         "severity": sev, "evidence": _clip(i.get("evidence"), 120)})
+        return AIVerdict.model_validate({
+            "risk_score": score, "risk_level": level, "threat_type": d.get("threat_type", "suspicious"),
+            "summary": _clip(d.get("summary"), 500), "indicators": inds,
+            "recommendations": [_clip(r, 300) for r in (d.get("recommendations") or [])[:6] if str(r).strip()],
+            "confidence": max(0.0, min(1.0, float(d.get("confidence", 0.5)))),
+        })
+    except Exception as e:  # noqa: BLE001
+        log.warning("AI response rejected (%s)", type(e).__name__)
+        return None
+
+
+def gemini_text(payload: dict) -> str | None:
+    """Extract the answer text from a generateContent response (None if blocked or empty)."""
+    for cand in payload.get("candidates") or []:
+        parts = (cand.get("content") or {}).get("parts") or []
+        text = "".join(p.get("text", "") for p in parts if not p.get("thought"))
+        if text.strip():
+            return text
+    return None
+
+
+async def _ask_gemini(body: dict) -> AIVerdict | None:
+    import httpx
+
+    s = get_settings()
+    try:
+        async with httpx.AsyncClient(timeout=s.ai_timeout_seconds) as c:
+            r = await c.post(GEMINI_URL.format(model=s.gemini_model), json=body,
+                             headers={"x-goog-api-key": s.gemini_api_key or ""})
+        if r.status_code != 200:
+            log.warning("Gemini error HTTP %s; using heuristics only", r.status_code)
+            return None
+        text = gemini_text(r.json())
+    except Exception as e:  # noqa: BLE001 — network/JSON failures must never break analysis
+        log.warning("Gemini unreachable (%s); using heuristics only", type(e).__name__)
+        return None
+    return parse_verdict(text) if text else None
+
+
 async def ai_analyze(content: str, input_type: str, lang: str, heuristic: list[Indicator], heuristic_score: int,
                      checks: list[CheckResult]) -> AIVerdict | None:
     s = get_settings()
-    if not s.ai_enabled:
-        return None
+    provider = s.active_ai_provider
+    if provider == "gemini":
+        return await _ask_gemini(gemini_request(content, input_type, lang, heuristic, heuristic_score, checks))
+    if provider == "anthropic":
+        return await _ask_claude(content, input_type, lang, heuristic, heuristic_score, checks)
+    return None
+
+
+async def _ask_claude(content: str, input_type: str, lang: str, heuristic: list[Indicator], heuristic_score: int,
+                      checks: list[CheckResult]) -> AIVerdict | None:
+    s = get_settings()
     try:
         import anthropic
     except ImportError:

@@ -4,6 +4,7 @@
  * Aggregations mirror backend/app/routers/dashboard.py.
  */
 import { ApiError } from "./apiError";
+import { GeminiError, callGemini, loadGemini } from "./gemini";
 import type { AnalysisResult, CallScript, DashboardStats, Health, InputType, Lang, RiskLevel, Scenario, ScanSummary, ThreatIntel } from "./types";
 
 // ---------- worker ----------
@@ -76,6 +77,29 @@ const newest = (a: StoredScan, b: StoredScan) => b.created_at.localeCompare(a.cr
 const historyRefs = () => load().sort(newest).slice(0, 2000)
   .map((s) => ({ id: s.id, submitted_content: s.submitted_content ?? "", threat_type: s.threat_type, risk_score: s.risk_score }));
 
+export type AiNotice = (kind: GeminiError["kind"]) => void;
+let aiNotice: AiNotice | null = null;
+/** UI hook: receives Gemini failures (bad key, quota…) so they can be shown as a toast. */
+export function onAiFailure(fn: AiNotice | null) { aiNotice = fn; }
+
+/** Optional Gemini step: same prompt and merge rules as the server; the score never changes. */
+async function withGemini(result: AnalysisResult, content: string): Promise<AnalysisResult> {
+  const g = loadGemini();
+  if (!g) return result;
+  try {
+    const body = await call<object>("ai_request", { result, content });
+    const payload = await callGemini(g, body);
+    const merged = await call<AnalysisResult | null>("ai_apply", { result, content, payload, model: g.model });
+    if (merged) return merged;
+    throw new GeminiError("other", "unusable answer");
+  } catch (e) {
+    const kind = e instanceof GeminiError ? e.kind : "other";
+    aiNotice?.(kind);
+    return { ...result, checks: result.checks.map((c) => c.name === "AI contextual analysis"
+      ? { ...c, status: "unavailable" as const, detail: `Gemini (${g.model}) unavailable: ${kind} — heuristic engine only` } : c) };
+  }
+}
+
 function persist(result: AnalysisResult): AnalysisResult {
   const scans = load();
   const id = scans.reduce((m, s) => Math.max(m, s.id), 0) + 1;
@@ -99,7 +123,8 @@ function catalog(lang: Lang) {
 export const browserApi = {
   health: async (): Promise<Health> => {
     await ensureWorker();
-    return { status: "ok", mode: "browser", ai_provider: { enabled: false, model: null },
+    const g = loadGemini();
+    return { status: "ok", mode: "browser", ai_provider: { enabled: !!g, model: g?.model ?? null },
       checks: { url_fetch: false, domain_age_rdap: false, google_safe_browsing: false, virustotal: false } };
   },
 
@@ -108,7 +133,7 @@ export const browserApi = {
     const body = type === "url" ? { url: content, lang, is_demo: isDemo }
       : type === "investment" ? { content, lang, is_demo: isDemo } : { content, input_type: type, lang, is_demo: isDemo };
     const r = await call<AnalysisResult>("analyze", { kind, body, history: historyRefs() });
-    return persist(r);
+    return persist(await withGemini(r, content));
   },
 
   analyzeCall: async (transcript: string, lang: Lang, save = false, isDemo = false) => {
@@ -116,7 +141,7 @@ export const browserApi = {
       body: { transcript, lang, save, is_demo: isDemo }, history: save ? historyRefs() : [],
     });
     delete r.save;
-    return save ? persist(r) : r;
+    return save ? persist(await withGemini(r, transcript)) : r;
   },
 
   callScript: (lang: Lang) => call<CallScript>("call_script", { lang }),

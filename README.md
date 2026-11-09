@@ -15,6 +15,11 @@ This is the GitHub Pages build. The same Python engine runs inside the browser (
 Live link checks (page inspection, domain age, reputation) and AI need the server version below.
 The first visit downloads the engine in about 10 seconds. To update the site, run `npm run build:pages` in `frontend/` and push `dist/` to the `gh-pages` branch.
 
+**Gemini AI on the website:** open *Gemini AI* in the sidebar (or `Ctrl/⌘ + K` → AI settings), paste your own key
+from [Google AI Studio](https://aistudio.google.com/apikey) and press *Save*. The key stays in your browser and is sent only
+to Google. It is never stored in this repository. Gemini adds explanations and its own opinion to each report; the risk
+score is still calculated by the deterministic engine.
+
 Full server version:
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Abylakhan/scamshield-ai)
@@ -228,7 +233,8 @@ cd frontend && npm run typecheck && npm run lint && npm test && npm run build
 
 | Variable | What it adds | Without it |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Claude contextual analysis, richer explanations | Heuristic engine only (fully functional) |
+| `GEMINI_API_KEY` | Google Gemini contextual analysis (`GEMINI_MODEL`, default `gemini-3.8-flash`) | Heuristic engine only (fully functional) |
+| `ANTHROPIC_API_KEY` | Claude contextual analysis (used when no Gemini key, or `AI_PROVIDER=anthropic`) | Heuristic engine only |
 | `GOOGLE_SAFE_BROWSING_API_KEY` | Google Safe Browsing reputation | Check shown as “skipped” |
 | `VIRUSTOTAL_API_KEY` | VirusTotal URL verdicts | Check shown as “skipped” |
 

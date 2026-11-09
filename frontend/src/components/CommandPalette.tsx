@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BookOpen, CornerDownLeft, FlaskConical, Globe, History, Home, Languages, LayoutDashboard, Link2, PhoneCall, Presentation, Radar,
+  BookOpen, Bot, CornerDownLeft, FlaskConical, Globe, History, Home, Languages, LayoutDashboard, Link2, PhoneCall, Presentation, Radar,
   ScanSearch, Search, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -54,6 +54,7 @@ export function CommandPalette() {
       { id: "a-new", group: "actions", label: P.newAnalysis, icon: ScanSearch, run: go("/analyze?type=message") },
       { id: "a-url", group: "actions", label: P.checkUrl, icon: Link2, run: go("/analyze?type=url") },
       { id: "a-call", group: "actions", label: P.simulateCall, icon: PhoneCall, run: go("/call-guard?simulate=1") },
+      { id: "a-ai", group: "actions", label: t.ai.open, icon: Bot, run: () => window.dispatchEvent(new Event("scamshield:ai-settings")) },
       { id: "a-example", group: "actions", label: P.runExample, icon: FlaskConical,
         run: go(`/analyze?type=message&demo=1&run=1&q=${encodeURIComponent(t.landing.exampleMsg)}`) },
       ...(["kk", "ru", "en"] as Lang[]).filter((l) => l !== lang).map((l) => ({

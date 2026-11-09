@@ -6,7 +6,7 @@ import logging
 from ..config import get_settings
 from ..schemas import AnalysisResult, CheckResult, Indicator
 from . import advice, scoring
-from .ai import ai_analyze
+from .ai import AIVerdict, ai_analyze
 from .net_checks import run_network_checks
 from .ruleset import get_ruleset
 from .text_rules import analyze_text
@@ -82,47 +82,50 @@ async def analyze(content: str, input_type: str, lang: str, *, network: bool = T
         i.recommendation = advice.indicator_recommendation(i.id, lang)
         i.explanation = i.explanation or i.description
 
+    report = AnalysisResult(
+        input_type=input_type, risk_score=final_score, risk_level=level, threat_type=threat_type,
+        summary=advice.build_summary(level, threat_type, lang), indicators=indicators,
+        recommendations=advice.build_recommendations(indicators, level, lang),
+        confidence=scoring.confidence(indicators, checks, len(content), False),
+        checks=checks, domains=list(dict.fromkeys(domains)), language=lang, ai_used=False,
+        score_breakdown=result.breakdown, score_details=result.details(get_ruleset()), ai_assessment=None,
+    )
+
     # Optional AI layer: explains and adds context, but never changes the deterministic score or level.
-    ai_used = False
-    ai_assessment = None
-    ai_recs: list[str] = []
     verdict = await ai_analyze(content, input_type, lang, indicators, final_score, checks) if use_ai else None
     if verdict is not None:
-        ai_used = True
-        known = {i.name.lower() for i in indicators}
-        for ai_ind in verdict.indicators:
-            ev = ai_ind.evidence.strip()
-            # Keep only AI observations whose quoted evidence is literally present in the submitted content.
-            if ai_ind.name.lower() in known or not ev or ev.lower()[:30] not in content.lower():
-                continue
-            indicators.append(Indicator(
-                id=f"ai_{len(indicators)}", name=ai_ind.name, description=ai_ind.description, explanation=ai_ind.description,
-                severity=ai_ind.severity, weight=0, contribution=0, category="ai_context", source="ai",
-                evidence=ev, evidence_type="ai", verified=False,
-            ))
-        ai_assessment = {"risk_score": verdict.risk_score, "risk_level": verdict.risk_level, "threat_type": verdict.threat_type,
-                         "summary": verdict.summary, "confidence": verdict.confidence,
-                         "note": "AI opinion for context only; the deterministic engine sets the risk score."}
-        ai_recs = verdict.recommendations
-        checks.append(CheckResult(name="AI contextual analysis", status="passed",
-                                  detail=f"{s.ai_model}; AI opinion {verdict.risk_score}/100 (not used for score)"))
+        merge_ai_verdict(report, verdict, content, s.active_ai_model or "AI")
+    elif not use_ai:
+        report.checks.append(CheckResult(name="AI contextual analysis", status="skipped", detail="live mode — heuristic engine only"))
     else:
-        if not use_ai:
-            checks.append(CheckResult(name="AI contextual analysis", status="skipped", detail="live mode — heuristic engine only"))
-        else:
-            checks.append(CheckResult(name="AI contextual analysis", status="skipped" if not s.ai_enabled else "unavailable",
-                                      detail="no ANTHROPIC_API_KEY configured — heuristic engine only" if not s.ai_enabled
-                                      else "provider unavailable — heuristic engine only"))
+        report.checks.append(CheckResult(name="AI contextual analysis", status="skipped" if not s.ai_enabled else "unavailable",
+                                  detail="no AI key configured (GEMINI_API_KEY or ANTHROPIC_API_KEY) — heuristic engine only"
+                                  if not s.ai_enabled else "provider unavailable — heuristic engine only"))
+    return report
 
-    recommendations = advice.build_recommendations(indicators, level, lang)
-    if ai_recs and level != "low":
-        recommendations = list(dict.fromkeys([*recommendations, *ai_recs]))[:7]
-    summary = advice.build_summary(level, threat_type, lang)
 
-    return AnalysisResult(
-        input_type=input_type, risk_score=final_score, risk_level=level, threat_type=threat_type,
-        summary=summary, indicators=indicators, recommendations=recommendations,
-        confidence=scoring.confidence(indicators, checks, len(content), ai_used),
-        checks=checks, domains=list(dict.fromkeys(domains)), language=lang, ai_used=ai_used,
-        score_breakdown=result.breakdown, score_details=result.details(get_ruleset()), ai_assessment=ai_assessment,
-    )
+def merge_ai_verdict(report: AnalysisResult, verdict: AIVerdict, content: str, model_label: str) -> AnalysisResult:
+    """Attach a validated AI verdict as unverified context. Score, level and breakdown stay deterministic.
+    Shared by the server pipeline and the browser build (bridge.py)."""
+    known = {i.name.lower() for i in report.indicators}
+    for ai_ind in verdict.indicators:
+        ev = ai_ind.evidence.strip()
+        # Keep only AI observations whose quoted evidence is literally present in the submitted content.
+        if ai_ind.name.lower() in known or not ev or ev.lower()[:30] not in content.lower():
+            continue
+        report.indicators.append(Indicator(
+            id=f"ai_{len(report.indicators)}", name=ai_ind.name, description=ai_ind.description, explanation=ai_ind.description,
+            severity=ai_ind.severity, weight=0, contribution=0, category="ai_context", source="ai",
+            evidence=ev, evidence_type="ai", verified=False,
+        ))
+    report.ai_used = True
+    report.ai_assessment = {"risk_score": verdict.risk_score, "risk_level": verdict.risk_level, "threat_type": verdict.threat_type,
+                            "summary": verdict.summary, "confidence": verdict.confidence, "model": model_label,
+                            "note": "AI opinion for context only; the deterministic engine sets the risk score."}
+    if verdict.recommendations and report.risk_level != "low":
+        report.recommendations = list(dict.fromkeys([*report.recommendations, *verdict.recommendations]))[:7]
+    report.checks = [c for c in report.checks if c.name != "AI contextual analysis"]
+    report.checks.append(CheckResult(name="AI contextual analysis", status="passed",
+                                     detail=f"{model_label}; AI opinion {verdict.risk_score}/100 (not used for score)"))
+    report.confidence = scoring.confidence(report.indicators, report.checks, len(content), True)
+    return report

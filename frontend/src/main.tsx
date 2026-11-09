@@ -5,6 +5,7 @@ import { AnimatePresence, MotionConfig } from "framer-motion";
 import { AnimatedBackground, CursorGlow, PageTransition } from "./lib/motion";
 import { installRipple } from "./lib/ripple";
 import { CommandPalette } from "./components/CommandPalette";
+import { AiSettings } from "./components/AiSettings";
 import { FeedbackProvider } from "./components/Feedback";
 import { RouteLoader } from "./components/RouteLoader";
 import "./index.css";
@@ -60,6 +61,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <FeedbackProvider>
             <AnimatedRoutes />
             <CommandPalette />
+            <AiSettings />
           </FeedbackProvider>
         </BrowserRouter>
       </I18nProvider>

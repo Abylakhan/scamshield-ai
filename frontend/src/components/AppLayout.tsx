@@ -1,10 +1,11 @@
-import { BookOpen, Command, History, LayoutDashboard, Menu, PhoneCall, Presentation, Radar, ScanSearch, X } from "lucide-react";
+import { BookOpen, Bot, Command, History, LayoutDashboard, Menu, PhoneCall, Presentation, Radar, ScanSearch, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useOutlet } from "react-router-dom";
 import { AnimatePresence, motion, useScroll } from "framer-motion";
 import { EASE, PageTransition, ScrollProgress } from "../lib/motion";
 import { Logo } from "./Logo";
 import { openPalette } from "./CommandPalette";
+import { openAiSettings, useGeminiEnabled } from "./AiSettings";
 import { ScrollTop } from "./ScrollTop";
 import { LangSwitch } from "./ui";
 import { useI18n } from "../lib/i18n";
@@ -23,6 +24,19 @@ export function useNavItems() {
     { to: "/learn", label: t.nav.learn, icon: BookOpen },
     { to: "/demo", label: t.nav.demo, icon: Presentation },
   ];
+}
+
+function AiButton() {
+  const { t } = useI18n();
+  const on = useGeminiEnabled();
+  return (
+    <button onClick={openAiSettings} className="group flex w-full items-center gap-2 rounded-xl border border-line bg-ink-900/60 px-3 py-2 text-xs text-slate-400 transition-colors duration-300 hover:border-violet-400/40 hover:text-white">
+      <Bot size={13} className="text-violet-300 transition-transform duration-300 group-hover:scale-110" />{t.ai.title}
+      <span className={cx("ml-auto flex items-center gap-1 rounded px-1.5 font-mono text-[10px]", on ? "bg-safe-400/10 text-safe-400" : "bg-ink-700 text-slate-500")}>
+        <span className={cx("h-1.5 w-1.5 rounded-full", on ? "bg-safe-400" : "bg-slate-600")} />{on ? t.ai.on : t.ai.off}
+      </span>
+    </button>
+  );
 }
 
 function EngineLoadingText() {
@@ -100,6 +114,7 @@ export function AppLayout() {
         <Link to="/" className="mb-8 px-2 transition-opacity hover:opacity-80"><Logo /></Link>
         {nav("desktop")}
         <div className="mt-auto space-y-3">
+          <AiButton />
           <button onClick={openPalette} className="group flex w-full items-center gap-2 rounded-xl border border-line bg-ink-900/60 px-3 py-2 text-xs text-slate-400 transition-colors duration-300 hover:border-cyan-400/30 hover:text-white">
             <Command size={13} className="transition-transform duration-300 group-hover:rotate-12" />{t.ui.palette.open}
             <kbd className="ml-auto rounded border border-line px-1 font-mono text-[10px]">⌘K</kbd>
@@ -129,7 +144,7 @@ export function AppLayout() {
                 <button className="grid h-9 w-9 place-items-center rounded-xl border border-line" onClick={() => setOpen(false)} aria-label="Close menu"><X size={18} /></button>
               </div>
               {nav("mobile")}
-              <div className="mt-auto"><EngineStatus /></div>
+              <div className="mt-auto space-y-3"><AiButton /><EngineStatus /></div>
             </motion.aside>
           </>
         )}

@@ -53,19 +53,26 @@ from pydantic import ValidationError  # noqa: E402
 
 from app.demo import call_script, list_scenarios  # noqa: E402
 from app.engine.advice import THREAT_LABELS  # noqa: E402
+from app.engine.ai import gemini_request, gemini_text, parse_verdict  # noqa: E402
 from app.engine.call_guard import call_assessment  # noqa: E402
 from app.engine.catalog import CATEGORY_INFO, INTEL_DISCLAIMER  # noqa: E402
-from app.engine.pipeline import analyze  # noqa: E402
+from app.engine.pipeline import analyze, merge_ai_verdict  # noqa: E402
 from app.engine.redact import redact  # noqa: E402
 from app.engine.similarity import SIMILAR_THRESHOLD, fingerprint, jaccard  # noqa: E402
 from app.engine.text_rules import rule_catalog  # noqa: E402
 from app.engine.url_analyzer import validate_url_input  # noqa: E402
 from app.schemas import (  # noqa: E402
-    CallAnalyzeRequest, CheckResult, InvestmentAnalyzeRequest, TextAnalyzeRequest, UrlAnalyzeRequest,
+    AnalysisResult, CallAnalyzeRequest, CheckResult, InvestmentAnalyzeRequest, TextAnalyzeRequest, UrlAnalyzeRequest,
 )
 
 BROWSER_CHECK = CheckResult(name="Live link checks", status="skipped",
                             detail="browser version — page inspection, domain age and reputation need the server version")
+
+
+def _ai_check_hint(result) -> None:
+    for c in result.checks:
+        if c.name == "AI contextual analysis":
+            c.detail = "add your Gemini API key in AI settings to enable it — heuristic engine only"
 
 
 class InvalidInput(Exception):
@@ -111,6 +118,7 @@ async def _analyze(kind: str, body: dict, history: list[dict]) -> dict:
         content, input_type, lang = req.content, req.input_type, req.lang
     result = await analyze(content, input_type, lang, network=False, use_ai=False)
     result.checks.insert(1, BROWSER_CHECK)
+    _ai_check_hint(result)
     result.similar = find_similar(content, history)
     out = result.model_dump(mode="json")
     out["submitted_content"] = redact(content)[:2000]
@@ -124,10 +132,31 @@ async def _analyze_call(body: dict, history: list[dict]) -> dict:
     result.call = call_assessment(result)
     if req.save:
         result.similar = find_similar(req.transcript, history)
+        _ai_check_hint(result)
     out = result.model_dump(mode="json")
     out["submitted_content"] = redact(req.transcript)[:2000]
     out["is_demo"] = req.is_demo
     out["save"] = req.save
+    return out
+
+
+def _ai_request(result: dict, content: str) -> dict:
+    """Gemini request body for an already-scored result (same prompt as the server)."""
+    r = AnalysisResult.model_validate(result)
+    verified = [i for i in r.indicators if i.verified]
+    return gemini_request(content, r.input_type, r.language, verified, r.risk_score, r.checks)
+
+
+def _ai_apply(result: dict, content: str, payload: dict, model: str) -> dict | None:
+    """Validate Gemini's answer and merge it as unverified context; None if unusable."""
+    text = gemini_text(payload)
+    verdict = parse_verdict(text) if text else None
+    if verdict is None:
+        return None
+    r = AnalysisResult.model_validate(result)
+    extra = {k: result.get(k) for k in ("id", "created_at", "submitted_content", "is_demo") if k in result}
+    out = merge_ai_verdict(r, verdict, content, model).model_dump(mode="json")
+    out.update({k: v for k, v in extra.items() if v is not None})
     return out
 
 
@@ -155,6 +184,10 @@ async def dispatch(raw: str) -> str:
             data = list_scenarios(args["lang"])
         elif op == "call_script":
             data = call_script(args["lang"])
+        elif op == "ai_request":
+            data = _ai_request(args["result"], args["content"])
+        elif op == "ai_apply":
+            data = _ai_apply(args["result"], args["content"], args["payload"], args["model"])
         elif op == "catalog":
             data = _catalog(args["lang"])
         else:

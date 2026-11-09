@@ -51,7 +51,7 @@ export interface AnalysisResult {
   score_details: ScoreDetails;
   similar: { count: number; best_id: number; best_similarity: number; threat_type: string; best_risk_score: number } | null;
   call: CallAssessment | null;
-  ai_assessment: { risk_score: number; risk_level: RiskLevel; threat_type: string; summary: string; confidence: number; note: string } | null;
+  ai_assessment: { risk_score: number; risk_level: RiskLevel; threat_type: string; summary: string; confidence: number; note: string; model?: string } | null;
   language: Lang;
   ai_used: boolean;
   is_demo: boolean;
@@ -112,7 +112,7 @@ export interface Scenario {
 export interface Health {
   status: string;
   mode?: "server" | "browser";
-  ai_provider: { enabled: boolean; model: string | null };
+  ai_provider: { enabled: boolean; model: string | null; provider?: string | null };
   checks: { url_fetch: boolean; domain_age_rdap: boolean; google_safe_browsing: boolean; virustotal: boolean };
 }
 

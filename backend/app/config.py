@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 60
 
     # AI provider (optional). Without a key the heuristic engine runs alone.
+    # ai_provider: "auto" (Gemini if GEMINI_API_KEY is set, else Claude), "gemini", "anthropic" or "none".
+    ai_provider: str = "auto"
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-3.8-flash"
     anthropic_api_key: str | None = None
     ai_model: str = "claude-opus-5-5"
     ai_effort: str = "low"
@@ -38,8 +42,21 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     @property
+    def active_ai_provider(self) -> str | None:
+        p = (self.ai_provider or "auto").lower()
+        if p in ("auto", "gemini") and self.gemini_api_key:
+            return "gemini"
+        if p in ("auto", "anthropic") and self.anthropic_api_key:
+            return "anthropic"
+        return None
+
+    @property
+    def active_ai_model(self) -> str | None:
+        return {"gemini": self.gemini_model, "anthropic": self.ai_model}.get(self.active_ai_provider or "")
+
+    @property
     def ai_enabled(self) -> bool:
-        return bool(self.anthropic_api_key)
+        return self.active_ai_provider is not None
 
 
 @lru_cache
