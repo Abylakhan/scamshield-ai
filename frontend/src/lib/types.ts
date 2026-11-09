@@ -118,11 +118,20 @@ export interface Health {
 
 export type CallStage = "contact" | "pretext" | "pressure" | "extraction";
 
+export type Speaker = "caller" | "you";
+export type SpeakerSource = "manual" | "text" | "voice" | "turn" | "default" | "ai";
+export interface SpeakerLabel { speaker: Speaker; confidence: number; source: SpeakerSource }
+export interface SpeakerResult { speakers: SpeakerLabel[]; ai_used: boolean; model: string | null }
+/** One recognised utterance sent to Call Guard; speaker "auto" lets the engine decide. */
+export interface CallLineIn { text: string; speaker: Speaker | "auto"; voice?: number | null; gap?: number | null }
+
 export interface CallAssessment {
   alert: boolean;
   reason: { id: string; name: string; evidence?: string | null } | null;
   stages: CallStage[];
   stage_count: number;
+  speakers?: SpeakerLabel[];
+  caller_lines?: number;
 }
 
 export interface CallScript {

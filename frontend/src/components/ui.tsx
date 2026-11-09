@@ -1,7 +1,7 @@
 import { AlertTriangle, Inbox, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 import { useId } from "react";
-import { EASE } from "../lib/motion";
+import { EASE, softBlur, unBlur } from "../lib/motion";
 import type { ReactNode } from "react";
 import { useI18n, LANG_LABELS } from "../lib/i18n";
 import { RISK_COLOR, cx } from "../lib/format";
@@ -50,7 +50,7 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <motion.h1 initial={{ opacity: 0, y: 12, filter: "blur(6px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.6, ease: EASE }}
+        <motion.h1 initial={{ opacity: 0, y: 12, ...softBlur(6) }} animate={{ opacity: 1, y: 0, ...unBlur }} transition={{ duration: 0.6, ease: EASE }}
           className="font-display text-2xl font-semibold tracking-tight text-white sm:text-[28px]">{title}</motion.h1>
         <motion.div initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.9, delay: 0.15, ease: EASE }}
           className="mt-2 h-[2px] w-16 origin-left rounded-full bg-gradient-to-r from-cyan-400 to-transparent" />

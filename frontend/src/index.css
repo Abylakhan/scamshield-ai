@@ -59,6 +59,8 @@
 .animate-marquee:hover { animation-play-state: paused; }
 @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 .animate-float { animation: float 6s ease-in-out infinite; }
+@keyframes grid-pan { to { background-position: 44px 44px; } }
+.animate-grid-pan { animation: grid-pan 6s linear infinite; }
 .ripple { position: absolute; border-radius: 9999px; pointer-events: none; background: currentColor; opacity: .22; transform: scale(0); animation: ripple .6s cubic-bezier(.16,1,.3,1) forwards; }
 @keyframes ripple { to { transform: scale(1); opacity: 0; } }
 @keyframes laser { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
@@ -68,6 +70,29 @@
 .animate-scanline { animation: scanline 2.2s linear infinite; }
 @keyframes pulse-ring { 0% { transform: scale(.9); opacity: .7; } 100% { transform: scale(1.6); opacity: 0; } }
 .animate-pulse-ring { animation: pulse-ring 2s ease-out infinite; }
+
+/* Call Guard — compositor-only animations (transform / opacity), cheap on phones. */
+@keyframes wave { from { transform: scaleY(var(--lo, .2)); } to { transform: scaleY(var(--hi, .8)); } }
+.animate-wave { animation: wave .6s ease-in-out infinite alternate; will-change: transform; }
+@keyframes caret { 50% { opacity: 0; } }
+.caret { animation: caret 1s steps(1) infinite; }
+@keyframes flag-pulse { 0% { box-shadow: 0 0 0 0 rgba(251,113,133,0); } 40% { box-shadow: 0 0 0 6px rgba(251,113,133,.25); } 100% { box-shadow: 0 0 0 0 rgba(251,113,133,0); } }
+.flag-pulse { animation: flag-pulse .9s ease-out 1; }
+@keyframes alert-border { 50% { border-color: rgba(251,113,133,.75); } }
+.alert-border { border-color: rgba(251,113,133,.25); animation: alert-border 1.4s ease-in-out infinite; }
+@keyframes blink-soft { 50% { opacity: .2; } }
+.alert-frame { animation: blink-soft 1s ease-in-out infinite; }
+@keyframes phone-shake { 0%, 60%, 100% { transform: rotate(0); } 10% { transform: rotate(-12deg); } 20% { transform: rotate(12deg); } 30% { transform: rotate(-8deg); } 40% { transform: rotate(8deg); } }
+.phone-shake { animation: phone-shake 1.5s ease-in-out infinite; }
+
+/* Lite mode (phones / tablets / weak hardware — set by lib/motion.tsx). Glass blur over an animated page is the
+   single most expensive effect on mobile GPUs: every panel re-blurs what is behind it on each frame. */
+.lite *, .lite *::before, .lite *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.lite .panel { background-color: rgba(10, 17, 34, .94); }
+.lite body { background-attachment: scroll; }
+.lite .border-glow::before { animation: none; background: none; border: 1px solid rgba(34,211,238,.45); -webkit-mask: none; mask: none; padding: 0; }
+.lite .text-shimmer { animation: none; background-position: 30% 0; }
+.lite .btn-primary::after { display: none; }
 
 @media print {
   /* Keep the dark report readable when saved as PDF. */

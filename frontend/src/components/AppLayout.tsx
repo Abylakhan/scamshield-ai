@@ -2,7 +2,7 @@ import { BookOpen, Bot, Command, History, LayoutDashboard, Menu, PhoneCall, Pres
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useOutlet } from "react-router-dom";
 import { AnimatePresence, motion, useScroll } from "framer-motion";
-import { EASE, PageTransition, ScrollProgress } from "../lib/motion";
+import { EASE, PageTransition, ScrollProgress, softBlur } from "../lib/motion";
 import { Logo } from "./Logo";
 import { openPalette } from "./CommandPalette";
 import { openAiSettings, useGeminiEnabled } from "./AiSettings";
@@ -106,7 +106,7 @@ export function AppLayout() {
   );
 
   return (
-    <motion.div className="min-h-screen lg:pl-64 print:pl-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, filter: "blur(6px)" }} transition={{ duration: 0.35 }}>
+    <motion.div className="min-h-screen lg:pl-64 print:pl-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, ...softBlur(6) }} transition={{ duration: 0.35 }}>
       <ScrollProgress progress={scrollYProgress} />
       {/* Desktop sidebar */}
       <motion.aside initial={{ x: -40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.6, ease: EASE }}

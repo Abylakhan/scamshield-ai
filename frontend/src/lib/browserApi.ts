@@ -5,7 +5,7 @@
  */
 import { ApiError } from "./apiError";
 import { GeminiError, callGemini, loadGemini } from "./gemini";
-import type { AnalysisResult, CallScript, DashboardStats, Health, InputType, Lang, RiskLevel, Scenario, ScanSummary, ThreatIntel } from "./types";
+import type { AnalysisResult, CallLineIn, CallScript, DashboardStats, Health, InputType, Lang, RiskLevel, Scenario, ScanSummary, SpeakerResult, ThreatIntel } from "./types";
 
 // ---------- worker ----------
 
@@ -136,12 +136,28 @@ export const browserApi = {
     return persist(await withGemini(r, content));
   },
 
-  analyzeCall: async (transcript: string, lang: Lang, save = false, isDemo = false) => {
+  analyzeCall: async (lines: CallLineIn[], lang: Lang, save = false, isDemo = false) => {
     const r = await call<AnalysisResult & { save?: boolean }>("analyze_call", {
-      body: { transcript, lang, save, is_demo: isDemo }, history: save ? historyRefs() : [],
+      body: { lines, lang, save, is_demo: isDemo }, history: save ? historyRefs() : [],
     });
     delete r.save;
-    return save ? persist(await withGemini(r, transcript)) : r;
+    return save ? persist(await withGemini(r, r.submitted_content ?? "")) : r;
+  },
+
+  /** Speaker separation: Gemini (visitor's own key) when configured, otherwise the engine's own attribution. */
+  callSpeakers: async (lines: CallLineIn[], lang: Lang): Promise<SpeakerResult> => {
+    const body = { lines, lang };
+    const g = loadGemini();
+    if (g) {
+      try {
+        const payload = await callGemini(g, await call<object>("speakers_request", { body }), 25_000);
+        const speakers = await call<SpeakerResult["speakers"] | null>("speakers_apply", { body, payload });
+        if (speakers) return { speakers, ai_used: true, model: g.model };
+      } catch (e) {
+        aiNotice?.(e instanceof GeminiError ? e.kind : "other");
+      }
+    }
+    return { speakers: await call<SpeakerResult["speakers"]>("speakers_auto", { body }), ai_used: false, model: null };
   },
 
   callScript: (lang: Lang) => call<CallScript>("call_script", { lang }),

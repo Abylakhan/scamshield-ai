@@ -97,8 +97,9 @@ const en = {
     status: { passed: "passed", flagged: "flagged", unavailable: "unavailable", skipped: "skipped", error: "error" },
   },
   call: {
+    speakerAuto: "Auto", speakerTap: "Wrong speaker? Tap the name to switch it.", swap: "Switch speaker", onlyCaller: "Only the caller's words are scored — your own answers never raise the risk.", aiOn: "AI separates the speakers", aiOff: "Speakers are separated by the built-in engine (words, pauses, voice). Connect Gemini for AI separation.", connectAi: "Connect AI", relabeling: "AI is checking who said what…", badge: { ai: "AI", voice: "voice", manual: "set by you", text: "auto", turn: "auto", default: "auto" }, sideCaller: "Caller", sideYou: "Me", 
     title: "Call Guard", subtitle: "Put a suspicious call on speaker. ScamShield listens, scores every phrase in real time and tells you the moment to hang up.",
-    privacy: "Live frames are analysed locally (no AI, no link lookups) and nothing is stored unless you save the report.",
+    privacy: "The risk is scored locally (no link lookups) and nothing is stored unless you save the report. If AI is connected, phrases are sent to it only to tell the speakers apart.",
     start: "Start listening", stop: "Stop", listening: "Listening…", idle: "Ready", simulate: "Simulate a scam call", simulating: "Simulation running…",
     simNote: "Test example — a fictional scripted call. Every line still goes through the real analysis engine.",
     manualLabel: "What did the caller say?", manualPlaceholder: "Type or paste a phrase from the call…", add: "Add", reset: "Reset", save: "Save call report",
@@ -271,8 +272,9 @@ const ru: Dict = {
     status: { passed: "пройдено", flagged: "найдено", unavailable: "недоступно", skipped: "пропущено", error: "ошибка" },
   },
   call: {
+    speakerAuto: "Авто", speakerTap: "Ошибся с собеседником? Нажмите на имя, чтобы поменять.", swap: "Сменить собеседника", onlyCaller: "Риск считается только по словам звонящего — ваши ответы его не повышают.", aiOn: "ИИ различает собеседников", aiOff: "Собеседников различает встроенный движок (слова, паузы, голос). Подключите Gemini для разделения с ИИ.", connectAi: "Подключить ИИ", relabeling: "ИИ проверяет, кто что сказал…", badge: { ai: "ИИ", voice: "голос", manual: "вручную", text: "авто", turn: "авто", default: "авто" }, sideCaller: "Звонящий", sideYou: "Я", 
     title: "Защита звонков", subtitle: "Включите подозрительный звонок на громкую связь. ScamShield слушает, оценивает каждую фразу в реальном времени и подскажет, когда класть трубку.",
-    privacy: "Фразы анализируются локально (без ИИ и проверки ссылок), ничего не сохраняется, пока вы сами не сохраните отчёт.",
+    privacy: "Риск считается локально (без проверки ссылок), ничего не сохраняется, пока вы сами не сохраните отчёт. Если ИИ подключён, фразы отправляются ему только чтобы различить собеседников.",
     start: "Начать прослушивание", stop: "Стоп", listening: "Слушаю…", idle: "Готов", simulate: "Симуляция мошеннического звонка", simulating: "Идёт симуляция…",
     simNote: "Тестовый пример — вымышленный сценарий звонка. Каждая фраза проходит через настоящий движок анализа.",
     manualLabel: "Что сказал звонящий?", manualPlaceholder: "Введите или вставьте фразу из разговора…", add: "Добавить", reset: "Сбросить", save: "Сохранить отчёт о звонке",
@@ -443,8 +445,9 @@ const kk: Dict = {
     status: { passed: "өтті", flagged: "анықталды", unavailable: "қолжетімсіз", skipped: "өткізілді", error: "қате" },
   },
   call: {
+    speakerAuto: "Авто", speakerTap: "Сөйлеуші қате ме? Ауыстыру үшін атын басыңыз.", swap: "Сөйлеушіні ауыстыру", onlyCaller: "Тәуекел тек қоңырау шалушының сөзі бойынша есептеледі — сіздің жауаптарыңыз оны көтермейді.", aiOn: "ЖИ сөйлеушілерді ажыратады", aiOff: "Сөйлеушілерді кіріктірілген қозғалтқыш ажыратады (сөз, үзіліс, дауыс). ЖИ арқылы ажырату үшін Gemini қосыңыз.", connectAi: "ЖИ қосу", relabeling: "ЖИ кім не айтқанын тексеруде…", badge: { ai: "ЖИ", voice: "дауыс", manual: "өзіңіз", text: "авто", turn: "авто", default: "авто" }, sideCaller: "Қоңырау шалушы", sideYou: "Мен", 
     title: "Қоңырау қорғанысы", subtitle: "Күдікті қоңырауды үндеткішке қосыңыз. ScamShield тыңдап, әр сөйлемді нақты уақытта бағалайды және тұтқаны қашан қою керегін айтады.",
-    privacy: "Сөйлемдер жергілікті талданады (ЖИ мен сілтеме тексеруінсіз), есепті өзіңіз сақтамайынша ештеңе сақталмайды.",
+    privacy: "Тәуекел жергілікті есептеледі (сілтеме тексеруінсіз), есепті өзіңіз сақтамайынша ештеңе сақталмайды. ЖИ қосулы болса, сөйлемдер оған тек сөйлеушілерді ажырату үшін жіберіледі.",
     start: "Тыңдауды бастау", stop: "Тоқтату", listening: "Тыңдап тұрмын…", idle: "Дайын", simulate: "Алаяқ қоңырауын симуляциялау", simulating: "Симуляция жүріп жатыр…",
     simNote: "Тест мысалы — ойдан шығарылған қоңырау сценарийі. Әр сөйлем нақты талдау қозғалтқышы арқылы өтеді.",
     manualLabel: "Қоңырау шалушы не айтты?", manualPlaceholder: "Әңгімеден сөйлемді енгізіңіз немесе қойыңыз…", add: "Қосу", reset: "Қалпына келтіру", save: "Қоңырау есебін сақтау",

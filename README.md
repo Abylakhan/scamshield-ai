@@ -46,8 +46,14 @@ supposedly taken in your name, don't hang up, read me the SMS code, move your mo
 **Call Guard** (`/call-guard`) listens to a call on speaker and reacts while the call is still going on:
 
 - the browser transcribes the call live (Web Speech API in Chrome/Edge, `kk-KZ`/`ru-RU`/`en-US`), or you can type phrases;
-- every phrase is scored by the same deterministic engine through `POST /api/analyze/call`, with no network lookups and
-  no AI, so it is fast and private; frames are not stored;
+- **two speakers are told apart.** One microphone hears both people, so every line is attributed to *Caller* or *Me*
+  from what is said (who introduces themselves as the bank/police and asks for codes vs. who answers, refuses or says
+  "I didn't take a loan"; Kazakh, Russian and English), the pause before the line and, on desktop, the voice pitch
+  (`backend/app/engine/speakers.py`). With AI configured (server provider, or a Gemini key in the browser build)
+  `POST /api/analyze/call/speakers` re-reads the whole conversation and relabels it. Tap a speaker name to correct
+  it; your own labels always win;
+- only the **caller's** lines are scored — your answers never raise the risk. Scoring goes through the same
+  deterministic engine (`POST /api/analyze/call` with `lines`), with no network lookups, so it is fast; frames are not stored;
 - a tracker shows how far the caller has progressed through the fraud script:
   fake identity → scary pretext → pressure → theft attempt;
 - the moment the caller asks for an SMS code, card details, a remote-access app or a transfer, a **full-screen "HANG UP"
@@ -63,6 +69,8 @@ supposedly taken in your name, don't hang up, read me the SMS code, move your mo
 - Pick the call language next to the mic button. If Kazakh recognition isn't available on the device, Call Guard
   switches to Russian automatically and says so.
 - Every failure (blocked, no microphone, microphone busy, offline) shows a specific message on the page.
+- On phones the microphone is handed to the speech recogniser alone (a second audio stream makes Android/iOS
+  recognition go silent), and duplicated results from Android are merged automatically.
 
 *Simulate a scam call* plays a fictional, clearly labelled script line by line through the real endpoint, so the
 feature can be demonstrated without a phone.
@@ -248,7 +256,8 @@ publish RDAP data, in which case the check is shown as “unavailable”.
 | POST | `/api/analyze/text` | Message or advertisement (`input_type`: `message` / `advertisement`) |
 | POST | `/api/analyze/url` | URL analysis |
 | POST | `/api/analyze/investment` | Investment offer |
-| POST | `/api/analyze/call` | Call Guard: live call transcript (`save: true` stores the report); separate 5× rate budget |
+| POST | `/api/analyze/call` | Call Guard: live call as `lines` (speakers separated, only the caller scored) or legacy `transcript`; `save: true` stores the report; separate 5× rate budget |
+| POST | `/api/analyze/call/speakers` | Call Guard: AI speaker separation (falls back to the engine without AI) |
 | GET | `/api/demo/call-script` | Fictional scam call for the Call Guard simulation |
 | GET | `/api/history` | Paginated history (`risk_level`, `input_type`, `limit`, `offset`) |
 | GET | `/api/history/{id}` | Full report |

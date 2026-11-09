@@ -4,9 +4,23 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 /** Shared easing — a soft "expo out" used across the app. */
 export const EASE = [0.16, 1, 0.3, 1] as const;
 
+/**
+ * Lite mode for phones, tablets and weak hardware: animations stay, but only on cheap properties
+ * (transform/opacity). Animated `filter: blur`, drifting blurred orbs and particles are what made phones lag.
+ */
+export const LITE = typeof window !== "undefined" && (
+  window.matchMedia("(pointer: coarse)").matches || window.innerWidth < 1024
+  || (navigator.hardwareConcurrency ?? 8) <= 4
+  || window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+if (LITE && typeof document !== "undefined") document.documentElement.classList.add("lite");
+
+/** Blur-in on desktop, plain fade/slide in lite mode. */
+export const softBlur = (px: number) => (LITE ? {} : { filter: `blur(${px}px)` });
+export const unBlur = LITE ? {} : { filter: "blur(0px)" };
+
 export const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 18, filter: "blur(6px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.6, ease: EASE } },
+  hidden: { opacity: 0, y: 18, ...softBlur(6) },
+  show: { opacity: 1, y: 0, ...unBlur, transition: { duration: 0.6, ease: EASE } },
 };
 
 export const staggerParent = (stagger = 0.07, delay = 0): Variants => ({
@@ -17,7 +31,7 @@ export const staggerParent = (stagger = 0.07, delay = 0): Variants => ({
 /** Reveals children when scrolled into view. */
 export function Reveal({ children, delay = 0, className, y = 18 }: { children: ReactNode; delay?: number; className?: string; y?: number }) {
   return (
-    <motion.div className={className} initial={{ opacity: 0, y, filter: "blur(6px)" }} whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+    <motion.div className={className} initial={{ opacity: 0, y, ...softBlur(6) }} whileInView={{ opacity: 1, y: 0, ...unBlur }}
       viewport={{ once: true, margin: "-60px" }} transition={{ duration: 0.7, delay, ease: EASE }}>
       {children}
     </motion.div>
@@ -71,14 +85,14 @@ export function SpotlightCard({ children, className, tilt = true, ...rest }: { c
   const bg = useMotionTemplate`radial-gradient(320px circle at ${mx}px ${my}px, rgba(34,211,238,0.10), transparent 70%)`;
   return (
     <motion.div ref={ref} className={`relative ${className ?? ""}`} style={{ rotateX: rx, rotateY: ry, transformPerspective: 900 }}
-      whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300, damping: 22 }}
+      whileHover={LITE ? undefined : { y: -4 }} transition={{ type: "spring", stiffness: 300, damping: 22 }}
       onMouseMove={(e) => {
         const r = ref.current!.getBoundingClientRect();
         mx.set(e.clientX - r.left); my.set(e.clientY - r.top);
         if (tilt) { ry.set(((e.clientX - r.left) / r.width - 0.5) * 6); rx.set(-((e.clientY - r.top) / r.height - 0.5) * 6); }
       }}
       onMouseLeave={() => { rx.set(0); ry.set(0); mx.set(-200); my.set(-200); }} {...rest}>
-      <motion.div aria-hidden className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ background: bg }} />
+      {!LITE && <motion.div aria-hidden className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ background: bg }} />}
       {children}
     </motion.div>
   );
@@ -113,19 +127,23 @@ export function WordReveal({ text, className, delay = 0, stagger = 0.06 }: { tex
   );
 }
 
-/** Fixed, slowly drifting aurora orbs + subtle particles behind the whole app. */
+/** Fixed aurora orbs + subtle particles behind the whole app. Radial gradients instead of `filter: blur` (much cheaper);
+ * in lite mode the orbs are static and there are no particles. */
 export function AnimatedBackground() {
-  const dots = useRef(Array.from({ length: 26 }, () => ({
+  const dots = useRef(Array.from({ length: LITE ? 0 : 22 }, () => ({
     x: Math.random() * 100, y: Math.random() * 100, s: 1 + Math.random() * 1.8, d: 8 + Math.random() * 14, delay: Math.random() * 8,
   }))).current;
+  const orb = (rgba: string) => ({ background: `radial-gradient(circle, ${rgba} 0%, transparent 68%)` });
+  const drift = (x: number[], y: number[], duration: number) =>
+    LITE ? {} : { animate: { x, y }, transition: { duration, repeat: Infinity, ease: "easeInOut" as const } };
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <motion.div className="absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-volt-500/20 blur-[120px]"
-        animate={{ x: [0, 120, 40, 0], y: [0, 60, 140, 0] }} transition={{ duration: 28, repeat: Infinity, ease: "easeInOut" }} />
-      <motion.div className="absolute -right-32 top-1/4 h-[460px] w-[460px] rounded-full bg-cyan-500/[0.12] blur-[120px]"
-        animate={{ x: [0, -100, -30, 0], y: [0, 80, -60, 0] }} transition={{ duration: 34, repeat: Infinity, ease: "easeInOut" }} />
-      <motion.div className="absolute bottom-[-200px] left-1/3 h-[420px] w-[420px] rounded-full bg-safe-500/[0.07] blur-[120px]"
-        animate={{ x: [0, 80, -60, 0], y: [0, -50, 20, 0] }} transition={{ duration: 40, repeat: Infinity, ease: "easeInOut" }} />
+      <motion.div className="absolute -left-60 -top-60 h-[760px] w-[760px] rounded-full will-change-transform" style={orb("rgba(37,99,235,.22)")}
+        {...drift([0, 120, 40, 0], [0, 60, 140, 0], 28)} />
+      <motion.div className="absolute -right-52 top-[10%] h-[700px] w-[700px] rounded-full will-change-transform" style={orb("rgba(6,182,212,.13)")}
+        {...drift([0, -100, -30, 0], [0, 80, -60, 0], 34)} />
+      <motion.div className="absolute bottom-[-320px] left-1/4 h-[660px] w-[660px] rounded-full will-change-transform" style={orb("rgba(16,185,129,.08)")}
+        {...drift([0, 80, -60, 0], [0, -50, 20, 0], 40)} />
       {dots.map((d, i) => (
         <motion.span key={i} className="absolute rounded-full bg-cyan-300/50" style={{ left: `${d.x}%`, top: `${d.y}%`, width: d.s, height: d.s }}
           animate={{ y: [0, -40, 0], opacity: [0, 0.8, 0] }} transition={{ duration: d.d, delay: d.delay, repeat: Infinity, ease: "easeInOut" }} />
@@ -137,8 +155,8 @@ export function AnimatedBackground() {
 /** Wrapper for route content: soft blur/slide transition. */
 export function PageTransition({ children }: { children: ReactNode }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 14, filter: "blur(8px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      exit={{ opacity: 0, y: -10, filter: "blur(6px)" }} transition={{ duration: 0.45, ease: EASE }}>
+    <motion.div initial={{ opacity: 0, y: 14, ...softBlur(8) }} animate={{ opacity: 1, y: 0, ...unBlur }}
+      exit={{ opacity: 0, y: -10, ...softBlur(6) }} transition={{ duration: LITE ? 0.3 : 0.45, ease: EASE }}>
       {children}
     </motion.div>
   );
@@ -153,8 +171,7 @@ export function ScrollProgress({ progress }: { progress: MotionValue<number> }) 
 
 /** Soft cyan glow that follows the cursor across the app (desktop pointers only; off with reduced motion). */
 export function CursorGlow() {
-  const enabled = typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches
-    && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const enabled = !LITE && window.matchMedia("(pointer: fine)").matches;
   const x = useSpring(-600, { stiffness: 120, damping: 24 });
   const y = useSpring(-600, { stiffness: 120, damping: 24 });
   useEffect(() => {

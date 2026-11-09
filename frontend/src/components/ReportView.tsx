@@ -9,8 +9,9 @@ import { RiskBadge, TestBadge } from "./ui";
 import { useI18n } from "../lib/i18n";
 import { cx, fmtDate } from "../lib/format";
 import type { AnalysisResult, CheckResult, Indicator } from "../lib/types";
+import { softBlur, unBlur } from "../lib/motion";
 
-const fade = { initial: { opacity: 0, y: 18, filter: "blur(6px)" }, animate: { opacity: 1, y: 0, filter: "blur(0px)" } };
+const fade = { initial: { opacity: 0, y: 18, ...softBlur(6) }, animate: { opacity: 1, y: 0, ...unBlur } };
 
 function CheckIcon({ s }: { s: CheckResult["status"] }) {
   if (s === "passed") return <CheckCircle2 size={15} className="text-safe-400" />;

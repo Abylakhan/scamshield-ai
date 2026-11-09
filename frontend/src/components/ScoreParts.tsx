@@ -4,7 +4,7 @@ import {
   ShieldCheck, TrendingDown, Users, Wallet, type LucideIcon,
 } from "lucide-react";
 import { Fragment, useMemo } from "react";
-import { EASE } from "../lib/motion";
+import { EASE, softBlur, unBlur } from "../lib/motion";
 import { evidenceSpans } from "../lib/highlight";
 import { SEVERITY_COLOR, cx } from "../lib/format";
 import { useI18n } from "../lib/i18n";
@@ -177,7 +177,7 @@ export function IndicatorCard({ i, idx }: { i: Indicator; idx: number }) {
   const sevColor = i.weight < 0 ? "#34d399" : SEVERITY_COLOR[i.severity];
   const reduced = i.weight > 0 && i.contribution > 0 && i.contribution < i.weight;
   return (
-    <motion.li initial={{ opacity: 0, x: -16, filter: "blur(4px)" }} animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+    <motion.li initial={{ opacity: 0, x: -16, ...softBlur(4) }} animate={{ opacity: 1, x: 0, ...unBlur }}
       transition={{ delay: 0.3 + idx * 0.06, duration: 0.45, ease: EASE }} whileHover={{ x: 3 }}
       className={cx("relative overflow-hidden rounded-xl border bg-ink-900/60 p-3.5", i.verified ? "border-line" : "border-dashed border-violet-400/30")}>
       <motion.span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: sevColor }} initial={{ scaleY: 0 }} animate={{ scaleY: 1 }}

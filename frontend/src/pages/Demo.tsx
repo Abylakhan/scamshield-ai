@@ -10,7 +10,7 @@ import { api } from "../lib/api";
 import { RISK_COLOR, cx } from "../lib/format";
 import { useI18n } from "../lib/i18n";
 import type { AnalysisResult, DashboardStats, Scenario } from "../lib/types";
-import { CountUp, Magnetic, SpotlightCard, WordReveal } from "../lib/motion";
+import { CountUp, Magnetic, SpotlightCard, WordReveal, softBlur, unBlur } from "../lib/motion";
 
 export default function Demo() {
   const { t, lang } = useI18n();
@@ -96,7 +96,7 @@ export default function Demo() {
 
       <div className="relative">
       <AnimatePresence mode="popLayout">
-        <motion.div key={step} initial={{ opacity: 0, x: 40, filter: "blur(8px)" }} animate={{ opacity: 1, x: 0, filter: "blur(0px)" }} exit={{ opacity: 0, x: -40, filter: "blur(8px)" }} transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}>
+        <motion.div key={step} initial={{ opacity: 0, x: 40, ...softBlur(8) }} animate={{ opacity: 1, x: 0, ...unBlur }} exit={{ opacity: 0, x: -40, ...softBlur(8) }} transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}>
           {step === 0 && (
             <section className="panel relative overflow-hidden p-8 sm:p-12">
               <div className="pointer-events-none absolute inset-0 grid-bg opacity-70 [mask-image:radial-gradient(ellipse_at_top_right,black,transparent_70%)]" />

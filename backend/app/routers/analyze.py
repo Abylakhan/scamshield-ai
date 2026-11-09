@@ -5,14 +5,19 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..demo import call_script, list_scenarios
-from ..engine.call_guard import call_assessment
+from ..engine.ai import ai_diarize
+from ..engine.call_guard import score_call
+from ..engine.speakers import LineIn, attribute
 from ..engine.pipeline import analyze
 from ..engine.redact import redact
 from ..engine.similarity import SIMILAR_THRESHOLD, fingerprint, jaccard
 from ..engine.url_analyzer import validate_url_input
 from ..models import Scan
 from ..ratelimit import call_rate_limit, rate_limit
-from ..schemas import AnalysisResult, CallAnalyzeRequest, InvestmentAnalyzeRequest, Lang, TextAnalyzeRequest, UrlAnalyzeRequest
+from ..config import get_settings
+from ..schemas import (
+    AnalysisResult, CallAnalyzeRequest, InvestmentAnalyzeRequest, Lang, SpeakerRequest, TextAnalyzeRequest, UrlAnalyzeRequest,
+)
 
 router = APIRouter(prefix="/api", tags=["analysis"])
 
@@ -75,13 +80,27 @@ async def analyze_url(req: UrlAnalyzeRequest, db: Session = Depends(get_db)):
 
 @router.post("/analyze/call", response_model=AnalysisResult, dependencies=[Depends(call_rate_limit)])
 async def analyze_call(req: CallAnalyzeRequest, db: Session = Depends(get_db)):
-    """Call Guard: score a live phone-call transcript. Frames are analysed locally (no network lookups, no AI) and
-    are not stored; send `save: true` with the final transcript to keep the call report in history."""
-    result = await analyze(req.transcript, "call", req.lang, network=False, use_ai=req.save)
-    result.call = call_assessment(result)
+    """Call Guard: score a live phone call. Speakers are separated and only the caller's lines are scored.
+    Frames are analysed locally (no network lookups, no AI) and are not stored; send `save: true` with the final
+    call to keep the report in history."""
+    result, stored = await score_call(req, use_ai=req.save)
     if req.save:
-        return _persist(db, req.transcript, result, req.is_demo)
+        return _persist(db, stored, result, req.is_demo)
     return result
+
+
+@router.post("/analyze/call/speakers", dependencies=[Depends(call_rate_limit)])
+async def call_speakers(req: SpeakerRequest):
+    """Separate the speakers of a call with AI (when a provider is configured). Manual labels are kept; without AI,
+    or if the model's answer is unusable, the deterministic attribution is returned with `ai_used: false`."""
+    lines = [{"text": line.text, "fixed": line.speaker if line.speaker != "auto" else None} for line in req.lines]
+    labels = await ai_diarize(lines) if get_settings().ai_enabled else None
+    if labels:
+        speakers = [{"speaker": line.speaker if line.speaker != "auto" else lab, "confidence": 1.0 if line.speaker != "auto" else 0.9,
+                     "source": "manual" if line.speaker != "auto" else "ai"} for line, lab in zip(req.lines, labels)]
+        return {"speakers": speakers, "ai_used": True, "model": get_settings().active_ai_model}
+    auto = attribute([LineIn(line.text, line.speaker, line.voice, line.gap) for line in req.lines])
+    return {"speakers": [a.as_dict() for a in auto], "ai_used": False, "model": None}
 
 
 @router.get("/demo/call-script", tags=["demo"])

@@ -3,7 +3,7 @@
 Only the server-only dependencies are replaced:
 * pydantic_settings → a plain pydantic model (settings use their defaults);
 * httpx → an inert stub (live link checks need a server and are skipped here).
-Detection rules, URL analysis, scoring, advice, Call Guard and scam memory are the unmodified backend modules.
+Detection rules, URL analysis, scoring, advice, Call Guard (with speaker separation) and scam memory are the unmodified backend modules.
 """
 from __future__ import annotations
 
@@ -53,16 +53,18 @@ from pydantic import ValidationError  # noqa: E402
 
 from app.demo import call_script, list_scenarios  # noqa: E402
 from app.engine.advice import THREAT_LABELS  # noqa: E402
-from app.engine.ai import gemini_request, gemini_text, parse_verdict  # noqa: E402
-from app.engine.call_guard import call_assessment  # noqa: E402
+from app.engine.ai import diarize_request, gemini_request, gemini_text, parse_speakers, parse_verdict  # noqa: E402
+from app.engine.call_guard import score_call  # noqa: E402
 from app.engine.catalog import CATEGORY_INFO, INTEL_DISCLAIMER  # noqa: E402
 from app.engine.pipeline import analyze, merge_ai_verdict  # noqa: E402
 from app.engine.redact import redact  # noqa: E402
 from app.engine.similarity import SIMILAR_THRESHOLD, fingerprint, jaccard  # noqa: E402
+from app.engine.speakers import LineIn, attribute  # noqa: E402
 from app.engine.text_rules import rule_catalog  # noqa: E402
 from app.engine.url_analyzer import validate_url_input  # noqa: E402
 from app.schemas import (  # noqa: E402
-    AnalysisResult, CallAnalyzeRequest, CheckResult, InvestmentAnalyzeRequest, TextAnalyzeRequest, UrlAnalyzeRequest,
+    AnalysisResult, CallAnalyzeRequest, CheckResult, InvestmentAnalyzeRequest, SpeakerRequest, TextAnalyzeRequest,
+    UrlAnalyzeRequest,
 )
 
 BROWSER_CHECK = CheckResult(name="Live link checks", status="skipped",
@@ -128,16 +130,36 @@ async def _analyze(kind: str, body: dict, history: list[dict]) -> dict:
 
 async def _analyze_call(body: dict, history: list[dict]) -> dict:
     req = _validate(CallAnalyzeRequest, body)
-    result = await analyze(req.transcript, "call", req.lang, network=False, use_ai=False)
-    result.call = call_assessment(result)
+    result, stored = await score_call(req)
     if req.save:
-        result.similar = find_similar(req.transcript, history)
+        result.similar = find_similar(stored, history)
         _ai_check_hint(result)
     out = result.model_dump(mode="json")
-    out["submitted_content"] = redact(req.transcript)[:2000]
+    out["submitted_content"] = redact(stored)[:2000]
     out["is_demo"] = req.is_demo
     out["save"] = req.save
     return out
+
+
+def _speaker_lines(body: dict) -> list[dict]:
+    req = _validate(SpeakerRequest, body)
+    return [{"text": line.text, "fixed": line.speaker if line.speaker != "auto" else None} for line in req.lines]
+
+
+def _speakers_auto(body: dict) -> list[dict]:
+    req = _validate(SpeakerRequest, body)
+    return [a.as_dict() for a in attribute([LineIn(x.text, x.speaker, x.voice, x.gap) for x in req.lines])]
+
+
+def _speakers_apply(body: dict, payload: dict) -> list[dict] | None:
+    """Validate Gemini's speaker labels; manual labels are kept. None if the answer is unusable."""
+    lines = _speaker_lines(body)
+    text = gemini_text(payload)
+    labels = parse_speakers(text, len(lines)) if text else None
+    if not labels:
+        return None
+    return [{"speaker": line["fixed"], "confidence": 1.0, "source": "manual"} if line["fixed"]
+            else {"speaker": lab, "confidence": 0.9, "source": "ai"} for line, lab in zip(lines, labels)]
 
 
 def _ai_request(result: dict, content: str) -> dict:
@@ -178,6 +200,12 @@ async def dispatch(raw: str) -> str:
             data = await _analyze(args["kind"], args["body"], args.get("history", []))
         elif op == "analyze_call":
             data = await _analyze_call(args["body"], args.get("history", []))
+        elif op == "speakers_auto":
+            data = _speakers_auto(args["body"])
+        elif op == "speakers_request":
+            data = diarize_request(_speaker_lines(args["body"]))
+        elif op == "speakers_apply":
+            data = _speakers_apply(args["body"], args["payload"])
         elif op == "similar":
             data = find_similar(args["content"], args.get("history", []), args.get("exclude_id"))
         elif op == "scenarios":

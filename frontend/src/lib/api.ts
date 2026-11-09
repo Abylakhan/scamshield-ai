@@ -1,4 +1,4 @@
-import type { AnalysisResult, CallScript, DashboardStats, Health, InputType, Lang, Scenario, ScanSummary, ThreatIntel } from "./types";
+import type { AnalysisResult, CallLineIn, CallScript, DashboardStats, Health, InputType, Lang, Scenario, ScanSummary, SpeakerResult, ThreatIntel } from "./types";
 
 const BASE = import.meta.env.VITE_API_BASE ?? "";
 
@@ -39,8 +39,10 @@ const serverApi = {
     if (type === "investment") return post<AnalysisResult>("/api/analyze/investment", { content, lang, is_demo: isDemo });
     return post<AnalysisResult>("/api/analyze/text", { content, input_type: type, lang, is_demo: isDemo });
   },
-  analyzeCall: (transcript: string, lang: Lang, save = false, isDemo = false) =>
-    request<AnalysisResult>("/api/analyze/call", { method: "POST", body: JSON.stringify({ transcript, lang, save, is_demo: isDemo }) }, save ? 60_000 : 15_000),
+  analyzeCall: (lines: CallLineIn[], lang: Lang, save = false, isDemo = false) =>
+    request<AnalysisResult>("/api/analyze/call", { method: "POST", body: JSON.stringify({ lines, lang, save, is_demo: isDemo }) }, save ? 60_000 : 15_000),
+  callSpeakers: (lines: CallLineIn[], lang: Lang) =>
+    request<SpeakerResult>("/api/analyze/call/speakers", { method: "POST", body: JSON.stringify({ lines, lang }) }, 30_000),
   callScript: (lang: Lang) => request<CallScript>(`/api/demo/call-script?lang=${lang}`),
   history: (params: { risk_level?: string; input_type?: string; limit?: number; offset?: number } = {}) => {
     const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)]));

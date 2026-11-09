@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .config import get_settings
 
@@ -45,17 +45,44 @@ class InvestmentAnalyzeRequest(BaseModel):
         return _clean(v)
 
 
+class CallLine(BaseModel):
+    """One recognised utterance. `speaker` is the user's own label, or "auto" to let Call Guard decide."""
+    text: str = Field(..., min_length=1, max_length=500)
+    speaker: Literal["caller", "you", "auto"] = "auto"
+    voice: float | None = Field(None, ge=40, le=600)  # median pitch, Hz
+    gap: float | None = Field(None, ge=0, le=3600)  # seconds of silence before the line
+
+    @field_validator("text")
+    @classmethod
+    def _check(cls, v: str) -> str:
+        return _clean(v)
+
+
 class CallAnalyzeRequest(BaseModel):
-    """A live call transcript (the client sends the most recent part, up to the input limit)."""
-    transcript: str = Field(..., min_length=1, max_length=_MAX)
+    """A live call. Send `lines` (preferred: speakers are separated and only the caller's words are scored) or a
+    plain `transcript` (older clients: everything is treated as the caller's speech)."""
+    transcript: str | None = Field(None, min_length=1, max_length=_MAX)
+    lines: list[CallLine] | None = Field(None, min_length=1, max_length=300)
     lang: Lang = "en"
     save: bool = False  # persist the final call report to history
     is_demo: bool = False
 
     @field_validator("transcript")
     @classmethod
-    def _check(cls, v: str) -> str:
-        return _clean(v)
+    def _check(cls, v: str | None) -> str | None:
+        return None if v is None else _clean(v)
+
+    @model_validator(mode="after")
+    def _need_content(self) -> "CallAnalyzeRequest":
+        if not self.lines and not self.transcript:
+            raise ValueError("Send the call as `lines` or `transcript`")
+        return self
+
+
+class SpeakerRequest(BaseModel):
+    """Lines to relabel with AI; manual labels ("caller"/"you") are kept as they are."""
+    lines: list[CallLine] = Field(..., min_length=1, max_length=300)
+    lang: Lang = "en"
 
 
 class UrlAnalyzeRequest(BaseModel):

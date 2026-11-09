@@ -9,7 +9,8 @@ import { Link } from "react-router-dom";
 import { Logo, LogoMark } from "../components/Logo";
 import { LangSwitch } from "../components/ui";
 import { useI18n } from "../lib/i18n";
-import { CountUp, EASE, Magnetic, Reveal, ScrollProgress, SpotlightCard, Stagger, StaggerItem, WordReveal } from "../lib/motion";
+import { cx } from "../lib/format";
+import { CountUp, EASE, Magnetic, Reveal, ScrollProgress, SpotlightCard, Stagger, StaggerItem, WordReveal, LITE, softBlur, unBlur } from "../lib/motion";
 
 function HeroVisual() {
   const ref = useRef<HTMLDivElement>(null);
@@ -43,24 +44,24 @@ function HeroVisual() {
         ))}
         {/* orbiting dots */}
         {[{ r: 6, d: 14, c: "#22d3ee" }, { r: 20, d: 10, c: "#3b82f6" }, { r: 34, d: 7, c: "#34d399" }].map((o, i) => (
-          <motion.div key={i} className="absolute" style={{ inset: `${o.r}%` }} animate={{ rotate: i % 2 ? -360 : 360 }} transition={{ duration: o.d, repeat: Infinity, ease: "linear" }}>
+          <div key={i} className="absolute animate-spin" style={{ inset: `${o.r}%`, animationDuration: `${o.d}s`, animationDirection: i % 2 ? "reverse" : "normal" }}>
             <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: o.c, boxShadow: `0 0 14px ${o.c}` }} />
-          </motion.div>
+          </div>
         ))}
-        <motion.div className="absolute inset-[6%] rounded-full" animate={{ rotate: 360 }} transition={{ duration: 9, repeat: Infinity, ease: "linear" }}
-          style={{ background: "conic-gradient(from 0deg, rgba(34,211,238,.22), transparent 22%)" }} />
+        <div className="absolute inset-[6%] animate-spin rounded-full"
+          style={{ animationDuration: "9s", background: "conic-gradient(from 0deg, rgba(34,211,238,.22), transparent 22%)" }} />
       </motion.div>
       <div className="absolute inset-0 grid place-items-center">
         <motion.div initial={{ scale: 0.5, opacity: 0, rotate: -20 }} animate={{ scale: 1, opacity: 1, rotate: 0 }} transition={{ duration: 1.1, delay: 0.3, ease: EASE }}
           whileHover={{ scale: 1.08, rotate: 3 }}
           className="relative rounded-[28px] p-3 shadow-glow" style={{ background: "rgba(10,17,34,.85)" }}>
           <span className="absolute inset-0 rounded-[28px] border border-cyan-400/40 animate-pulse-ring" />
-          <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}><LogoMark size={112} /></motion.div>
+          <div className="animate-float"><LogoMark size={112} /></div>
         </motion.div>
       </div>
       {chips.map((c) => (
         <motion.div key={c.label} className="absolute" style={{ left: c.x, top: c.y, x: chipX, y: chipY }}>
-          <motion.div initial={{ opacity: 0, scale: 0.6, y: 14 }} animate={{ opacity: 1, scale: 1, y: [0, -8, 0] }}
+          <motion.div initial={{ opacity: 0, scale: 0.6, y: 14 }} animate={{ opacity: 1, scale: 1, y: LITE ? 0 : [0, -8, 0] }}
             transition={{ opacity: { delay: 0.9 + c.d * 0.4, duration: 0.5 }, scale: { delay: 0.9 + c.d * 0.4, type: "spring", stiffness: 260, damping: 16 }, y: { duration: 5, repeat: Infinity, delay: c.d, ease: "easeInOut" } }}
             whileHover={{ scale: 1.1 }}>
             <span className="chip whitespace-nowrap border-line bg-ink-850/90 py-1 font-mono text-[11px] text-slate-200 backdrop-blur">
@@ -150,7 +151,7 @@ function CallGuardPreview() {
       <AnimatePresence>
         {alert && (
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 grid place-items-center rounded-[2rem] bg-hot-500/25 backdrop-blur-sm">
+            className="absolute inset-0 grid place-items-center rounded-[2rem] bg-hot-500/30 backdrop-blur-sm">
             <motion.div animate={{ scale: [1, 1.06, 1] }} transition={{ duration: 0.8, repeat: Infinity }} className="text-center">
               <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-hot-500 text-white shadow-[0_0_30px_#f43f5e]"><PhoneOff size={26} /></span>
               <p className="mt-3 font-display text-xl font-bold text-white">{t.call.alertTitle}</p>
@@ -209,8 +210,7 @@ export default function Landing() {
       <section className="relative" onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); sx.set(e.clientX - r.left); sy.set(e.clientY - r.top); }}
         onMouseLeave={() => { sx.set(-500); sy.set(-500); }}>
         <motion.div className="pointer-events-none absolute inset-0" style={{ background: spotlight }} />
-        <motion.div className="pointer-events-none absolute inset-0 grid-bg [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]"
-          animate={{ backgroundPosition: ["0px 0px", "44px 44px"] }} transition={{ duration: 6, repeat: Infinity, ease: "linear" }} />
+        <div className={cx("pointer-events-none absolute inset-0 grid-bg [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]", !LITE && "animate-grid-pan")} />
         <div className="relative mx-auto grid max-w-[1200px] items-center gap-10 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pb-24 lg:pt-20">
           <div key={lang}>
             <motion.p initial={{ opacity: 0, y: -10, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.6, ease: EASE }}
@@ -222,7 +222,7 @@ export default function Landing() {
               <br />
               <WordReveal text={L.title2} delay={0.35} className="text-shimmer" />
             </h1>
-            <motion.p initial={{ opacity: 0, y: 16, filter: "blur(6px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.8, delay: 0.6, ease: EASE }}
+            <motion.p initial={{ opacity: 0, y: 16, ...softBlur(6) }} animate={{ opacity: 1, y: 0, ...unBlur }} transition={{ duration: 0.8, delay: 0.6, ease: EASE }}
               className="mt-6 max-w-lg text-lg leading-relaxed text-slate-300">{L.subtitle}</motion.p>
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.8, ease: EASE }} className="mt-8 flex flex-wrap gap-3">
               <Magnetic><Link to="/analyze" className="btn-primary px-5 py-3 text-[15px]"><ScanSearch size={18} />{L.cta}</Link></Magnetic>

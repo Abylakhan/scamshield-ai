@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Stagger, StaggerItem } from "../lib/motion";
+import { Stagger, StaggerItem, softBlur, unBlur } from "../lib/motion";
 import { AlertTriangle, Brain, CheckCircle2, Fish, Link as LinkIcon, MessageCircle, Smartphone, TrendingUp, Triangle } from "lucide-react";
 import { useState } from "react";
 import { PageHeader } from "../components/ui";
@@ -38,8 +38,8 @@ export default function Learn() {
         </Stagger>
 
         <AnimatePresence mode="popLayout">
-        <motion.article key={topic.id + lang} initial={{ opacity: 0, x: 24, filter: "blur(6px)" }} animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-          exit={{ opacity: 0, x: -24, filter: "blur(6px)" }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} className="panel panel-pad">
+        <motion.article key={topic.id + lang} initial={{ opacity: 0, x: 24, ...softBlur(6) }} animate={{ opacity: 1, x: 0, ...unBlur }}
+          exit={{ opacity: 0, x: -24, ...softBlur(6) }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} className="panel panel-pad">
           <div className="mb-4 flex items-center gap-3">
             <motion.span initial={{ scale: 0, rotate: -90 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.1 }}
               className="grid h-11 w-11 place-items-center rounded-xl bg-cyan-400/10 text-cyan-300 shadow-[0_0_24px_rgba(34,211,238,.2)]"><Icon size={20} /></motion.span>

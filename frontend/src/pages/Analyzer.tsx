@@ -9,7 +9,7 @@ import { api } from "../lib/api";
 import { cx } from "../lib/format";
 import { useI18n } from "../lib/i18n";
 import type { AnalysisResult, InputType, Scenario } from "../lib/types";
-import { Magnetic, Stagger, StaggerItem } from "../lib/motion";
+import { Magnetic, Stagger, StaggerItem, softBlur } from "../lib/motion";
 
 type AnalyzerType = Exclude<InputType, "call">;
 const TYPES: { id: AnalyzerType; icon: typeof Globe }[] = [
@@ -167,7 +167,7 @@ export default function Analyzer() {
       <div ref={resultRef} className="relative mt-6 scroll-mt-20">
         <AnimatePresence mode="popLayout">
           {loading && !result ? (
-            <motion.div key="scan" initial={{ opacity: 0, scale: 0.97, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, filter: "blur(6px)" }} className="max-w-xl">
+            <motion.div key="scan" initial={{ opacity: 0, scale: 0.97, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, ...softBlur(6) }} className="max-w-xl">
               <ScanSequence done={done} hasUrl={hasUrl} />
             </motion.div>
           ) : error ? (
