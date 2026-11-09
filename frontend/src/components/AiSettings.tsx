@@ -3,7 +3,7 @@ import { Bot, CheckCircle2, KeyRound, Loader2, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { STATIC_MODE } from "../lib/api";
 import { onAiFailure } from "../lib/browserApi";
-import { AI_PROXY, DEFAULT_GEMINI_MODEL, GeminiError, loadGemini, loadPersonalGemini, saveGemini, testGemini } from "../lib/gemini";
+import { AI_PROXY, DEFAULT_GEMINI_MODEL, GeminiError, loadGemini, loadPersonalGemini, proxyAvailable, saveGemini, testGemini } from "../lib/gemini";
 import { useI18n } from "../lib/i18n";
 import { useFeedback } from "./Feedback";
 
@@ -81,7 +81,7 @@ export function AiSettings() {
             </div>
             {STATIC_MODE ? (
               <form className="mt-5 space-y-3" onSubmit={(e) => { e.preventDefault(); if (key.trim()) save(); }}>
-                {AI_PROXY && (
+                {proxyAvailable() && (
                   <div className={`rounded-xl border px-3 py-2.5 text-xs leading-relaxed ${saved ? "border-line bg-ink-950/60 text-slate-400" : "border-safe-400/30 bg-safe-400/10 text-safe-300"}`}>
                     <p className="flex items-start gap-1.5 font-semibold"><CheckCircle2 size={14} className="mt-px shrink-0" />{saved ? A.builtInOverridden : A.builtIn}</p>
                     <button type="button" className="mt-1.5 inline-flex items-center gap-1 font-semibold text-cyan-300 hover:underline" onClick={testProxy} disabled={testingProxy}>
@@ -89,7 +89,7 @@ export function AiSettings() {
                     </button>
                   </div>
                 )}
-                {AI_PROXY && <p className="label pt-1">{A.ownKey}</p>}
+                {proxyAvailable() && <p className="label pt-1">{A.ownKey}</p>}
                 <div>
                   <label htmlFor="gemini-key" className="label mb-1.5 block">{A.keyLabel}</label>
                   <div className="relative">

@@ -20,9 +20,20 @@ export function loadPersonalGemini(): GeminiSettings | null {
   } catch { return null; }
 }
 
+/** Built-in proxy readiness: unknown until /health answers; only a proxy that has its key counts as AI. */
+let proxyReady = false;
+if (AI_PROXY && typeof window !== "undefined") {
+  fetch(`${AI_PROXY}/health`).then((r) => r.json()).then((h: { ok?: boolean }) => {
+    proxyReady = !!h.ok;
+    if (proxyReady) window.dispatchEvent(new Event("scamshield:gemini"));
+  }).catch(() => undefined);
+}
+
+export const proxyAvailable = () => proxyReady;
+
 /** Settings to use: the personal key when present, otherwise the built-in proxy (model is chosen by the proxy). */
 export function loadGemini(): GeminiSettings | null {
-  return loadPersonalGemini() ?? (AI_PROXY ? { apiKey: "", model: DEFAULT_GEMINI_MODEL, proxy: AI_PROXY } : null);
+  return loadPersonalGemini() ?? (proxyReady ? { apiKey: "", model: DEFAULT_GEMINI_MODEL, proxy: AI_PROXY } : null);
 }
 
 export function saveGemini(s: GeminiSettings | null) {
